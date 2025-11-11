@@ -43,13 +43,16 @@ export class CiderAPI {
 
     const items: MusicItem[] = [];
     const recommendations = result?.data?.data || [];
+    const seenIds = new Set<string>();
 
     for (const rec of recommendations) {
       const contents = rec.relationships?.contents?.data || [];
       for (const item of contents.slice(0, 10)) {
         const parsed = this.parseItem(item);
         // Filter out stations - they cause rendering issues
-        if (parsed.type !== "stations") {
+        // Also filter out duplicates
+        if (parsed.type !== "stations" && !seenIds.has(parsed.id)) {
+          seenIds.add(parsed.id);
           items.push(parsed);
         }
       }
