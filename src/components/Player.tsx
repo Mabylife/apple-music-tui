@@ -30,7 +30,7 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
           borderColor="gray"
         >
           {/* nerd font music f001 */}
-          <Text color={"gray"}>󰝚</Text>
+          <Text color="gray">󰝚</Text>
         </Box>
 
         {/* Info - Grows */}
@@ -68,9 +68,10 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
           justifyContent="center"
           alignItems="center"
           flexShrink={0}
+          borderColor="gray"
         >
           {/* nerd font music f001 */}
-          <Text color={"gray"}>󰝚</Text>
+          <Text color="gray">󰝚</Text>
         </Box>
 
         {/* Info - Grows */}
