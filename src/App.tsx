@@ -62,7 +62,7 @@ export const App: React.FC = () => {
 
   const isWide = terminalSize.width > 120;
 
-  useInput((input, key) => {
+  useInput((input: string, key: any) => {
     if (commandMode) {
       if (key.return) {
         // Execute command
@@ -172,7 +172,7 @@ export const App: React.FC = () => {
   // art_height_cells = art_width_cells / 2
   // Need to reduce slightly to account for borders
   const playerWidthWide = Math.floor(terminalSize.width * 0.35);
-  const artSizeWide = Math.floor(playerWidthWide / 2) - 4; // Reduce by 2 for borders
+  const artSizeWide = Math.floor(playerWidthWide / 2) - 4; // Reduce by 4 for borders
 
   // Narrow mode: Art height is 100% of player inner height, width for visual square
   // Visual square: art_visual_width = art_visual_height
