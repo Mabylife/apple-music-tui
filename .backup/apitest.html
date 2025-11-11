@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cider RPC API Tester</title>
+    <link rel="stylesheet" href="./apitest.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Cider RPC API Tester</h1>
+
+      <div class="config">
+        <h2>Configuration</h2>
+        <div class="input-group">
+          <label>API Token (optional):</label>
+          <input
+            type="text"
+            id="apiToken"
+            placeholder="Leave empty if auth is disabled"
+          />
+        </div>
+        <div class="input-group">
+          <label>Base URL:</label>
+          <input type="text" id="baseUrl" value="http://localhost:10767" />
+        </div>
+      </div>
+
+      <div class="endpoints">
+        <h2>Playback Controls</h2>
+
+        <div class="endpoint-group">
+          <h3>Status Check</h3>
+          <button onclick="testEndpoint('GET', '/api/v1/playback/active')">
+            Check Active
+          </button>
+          <button onclick="testEndpoint('GET', '/api/v1/playback/is-playing')">
+            Is Playing
+          </button>
+          <button onclick="testEndpoint('GET', '/api/v1/playback/now-playing')">
+            Now Playing
+          </button>
+        </div>
+
+        <div class="endpoint-group">
+          <h3>Playback Control</h3>
+          <button onclick="testEndpoint('POST', '/api/v1/playback/play')">
+            Play
+          </button>
+          <button onclick="testEndpoint('POST', '/api/v1/playback/pause')">
+            Pause
+          </button>
+          <button onclick="testEndpoint('POST', '/api/v1/playback/playpause')">
+            Play/Pause
+          </button>
+          <button onclick="testEndpoint('POST', '/api/v1/playback/stop')">
+            Stop
+          </button>
+        </div>
+
+        <div class="endpoint-group">
+          <h3>Track Navigation</h3>
+          <button onclick="testEndpoint('POST', '/api/v1/playback/next')">
+            Next Track
+          </button>
+          <button onclick="testEndpoint('POST', '/api/v1/playback/previous')">
+            Previous Track
+          </button>
+        </div>
+
+        <div class="endpoint-group">
+          <h3>Volume Control</h3>
+          <div class="input-group">
+            <input
+              type="number"
+              id="volumeValue"
+              min="0"
+              max="1"
+              step="0.1"
+              value="0.5"
+              placeholder="0-1"
+            />
+            <button onclick="setVolume()">Set Volume</button>
+          </div>
+          <button onclick="testEndpoint('GET', '/api/v1/playback/volume')">
+            Get Volume
+          </button>
+        </div>
+
+        <div class="endpoint-group">
+          <h3>Seek</h3>
+          <div class="input-group">
+            <input
+              type="number"
+              id="seekPosition"
+              min="0"
+              placeholder="Position in seconds"
+            />
+            <button onclick="seekTo()">Seek To</button>
+          </div>
+        </div>
+
+        <div class="endpoint-group">
+          <h3>Shuffle & Repeat</h3>
+          <button
+            onclick="testEndpoint('GET', '/api/v1/playback/shuffle-mode')"
+          >
+            Get Shuffle
+          </button>
+          <button
+            onclick="testEndpoint('POST', '/api/v1/playback/toggle-shuffle')"
+          >
+            Toggle Shuffle
+          </button>
+          <button onclick="testEndpoint('GET', '/api/v1/playback/repeat-mode')">
+            Get Repeat
+          </button>
+          <button
+            onclick="testEndpoint('POST', '/api/v1/playback/toggle-repeat')"
+          >
+            Cycle Repeat
+          </button>
+        </div>
+
+        <h2>Apple Music API (via /amapi)</h2>
+
+        <div class="endpoint-group">
+          <h3>Library Search</h3>
+          <div class="input-group">
+            <input
+              type="text"
+              id="searchTerm"
+              placeholder="Search term (e.g., Gummy B)"
+              value="Gummy B"
+            />
+            <button onclick="searchLibrary()">Search Library</button>
+          </div>
+          <button onclick="testAMAPI('/v1/me/library/songs', 'GET')">
+            Get All Library Songs
+          </button>
+          <button onclick="testAMAPI('/v1/me/library/albums', 'GET')">
+            Get Library Albums
+          </button>
+          <button onclick="testAMAPI('/v1/me/library/artists', 'GET')">
+            Get Library Artists
+          </button>
+        </div>
+      </div>
+
+      <div class="response">
+        <h2>Response</h2>
+        <div class="response-info">
+          <span id="statusCode"></span>
+          <span id="requestInfo"></span>
+        </div>
+        <pre id="responseData"></pre>
+      </div>
+    </div>
+
+    <script src="./apitest.js"></script>
+  </body>
+</html>
