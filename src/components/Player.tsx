@@ -27,7 +27,7 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
           justifyContent="center"
           alignItems="center"
           flexShrink={0}
-          borderColor={"gray"}
+          borderColor="gray"
         >
           {/* nerd font music f001 */}
           <Text color={"gray"}>󰝚</Text>
