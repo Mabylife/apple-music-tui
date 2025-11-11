@@ -8,7 +8,6 @@ export async function CiderFetch<T>(
   options: RequestInit = {}
 ) {
   const response = await fetch(IOState.hostAddress + href, {
-    // @ts-expect-error
     headers: {
       "Content-Type": "application/json",
       apptoken: IOState.store.get(IOState.apiToken),
