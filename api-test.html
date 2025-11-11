@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cider API Test</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: monospace;
+        padding: 20px;
+        background: #1e1e1e;
+        color: #d4d4d4;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 20px;
+      }
+      .sidebar {
+        background: #252525;
+        padding: 15px;
+        border-radius: 4px;
+        height: fit-content;
+      }
+      .main {
+        background: #252525;
+        padding: 20px;
+        border-radius: 4px;
+      }
+      h1 {
+        margin-bottom: 20px;
+        font-size: 24px;
+        grid-column: 1 / -1;
+      }
+      h2 {
+        font-size: 16px;
+        margin-bottom: 10px;
+        color: #4ec9b0;
+      }
+      h3 {
+        font-size: 14px;
+        margin: 15px 0 8px;
+        color: #569cd6;
+      }
+      .endpoint {
+        background: #2d2d2d;
+        padding: 8px;
+        margin-bottom: 5px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px;
+        border: 1px solid #3e3e3e;
+      }
+      .endpoint:hover {
+        background: #3e3e3e;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+      }
+      select,
+      input,
+      textarea {
+        width: 100%;
+        padding: 10px;
+        background: #2d2d2d;
+        color: #d4d4d4;
+        border: 1px solid #3e3e3e;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 13px;
+      }
+      textarea {
+        min-height: 80px;
+        resize: vertical;
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+      .controls button {
+        padding: 10px;
+      }
+      button {
+        padding: 12px 24px;
+        background: #007acc;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-family: monospace;
+      }
+      button:hover {
+        background: #005a9e;
+      }
+      button.secondary {
+        background: #3e3e3e;
+      }
+      button.secondary:hover {
+        background: #4e4e4e;
+      }
+      .response {
+        margin-top: 20px;
+        padding: 15px;
+        background: #2d2d2d;
+        border: 1px solid #3e3e3e;
+        border-radius: 4px;
+      }
+      .response pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-size: 12px;
+      }
+      .status {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        margin-bottom: 10px;
+      }
+      .status-200 {
+        background: #4ec9b0;
+        color: #000;
+      }
+      .status-error {
+        background: #f48771;
+        color: #000;
+      }
+      .now-playing {
+        background: #2d2d2d;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+      }
+      .now-playing h3 {
+        margin-top: 0;
+      }
+      .track-info {
+        margin: 10px 0;
+      }
+      .volume-control {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .volume-control input[type="range"] {
+        flex: 1;
+      }
+      .search-section {
+        margin-bottom: 20px;
+      }
+      .search-results {
+        max-height: 400px;
+        overflow-y: auto;
+      }
+      .search-item {
+        background: #2d2d2d;
+        padding: 10px;
+        margin-bottom: 5px;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .search-item:hover {
+        background: #3e3e3e;
+      }
+      @media (max-width: 900px) {
+        .container {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1 style="grid-column: 1 / -1">Cider API Test</h1>
+
+      <div class="sidebar">
+        <div class="form-group">
+          <label>Base URL</label>
+          <input type="text" id="baseUrl" value="http://localhost:10767" />
+          <button
+            onclick="testConnection()"
+            style="margin-top: 5px; width: 100%"
+          >
+            Test Connection
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label>API Token</label>
+          <input type="text" id="apiToken" placeholder="Your API token" />
+        </div>
+
+        <div class="form-group">
+          <label>Storefront</label>
+          <input
+            type="text"
+            id="storefront"
+            value="tw"
+            readonly
+            style="background: #1e1e1e"
+          />
+        </div>
+
+        <h2>Playback Controls</h2>
+        <div
+          class="endpoint"
+          onclick="quickAction('POST', '/api/v1/playback/play')"
+        >
+          ▶️ Play
+        </div>
+        <div
+          class="endpoint"
+          onclick="quickAction('POST', '/api/v1/playback/pause')"
+        >
+          ⏸️ Pause
+        </div>
+        <div
+          class="endpoint"
+          onclick="quickAction('POST', '/api/v1/playback/playpause')"
+        >
+          ⏯️ Play/Pause
+        </div>
+        <div
+          class="endpoint"
+          onclick="quickAction('POST', '/api/v1/playback/next')"
+        >
+          ⏭️ Next
+        </div>
+        <div
+          class="endpoint"
+          onclick="quickAction('POST', '/api/v1/playback/previous')"
+        >
+          ⏮️ Previous
+        </div>
+        <div
+          class="endpoint"
+          onclick="quickAction('POST', '/api/v1/playback/stop')"
+        >
+          ⏹️ Stop
+        </div>
+
+        <h3>Controls</h3>
+        <div
+          class="endpoint"
+          onclick="quickAction('POST', '/api/v1/playback/toggle-shuffle')"
+        >
+          Toggle Shuffle
+        </div>
+        <div
+          class="endpoint"
+          onclick="quickAction('POST', '/api/v1/playback/toggle-repeat')"
+        >
+          Toggle Repeat
+        </div>
+        <div
+          class="endpoint"
+          onclick="quickAction('POST', '/api/v1/playback/toggle-autoplay')"
+        >
+          Toggle Autoplay
+        </div>
+        <div
+          class="endpoint"
+          onclick="quickAction('POST', '/api/v1/playback/add-to-library')"
+        >
+          Add to Library
+        </div>
+
+        <h3>Advanced</h3>
+        <div
+          class="endpoint"
+          onclick="quickActionWithPrompt('POST', '/api/v1/playback/seek', 'position', 30, 'Enter seconds (e.g. 30)')"
+        >
+          Seek
+        </div>
+        <div
+          class="endpoint"
+          onclick="quickActionWithPrompt('POST', '/api/v1/playback/volume', 'volume', 0.5, 'Enter volume 0-1 (e.g. 0.5 = 50%)')"
+        >
+          Set Volume
+        </div>
+        <div
+          class="endpoint"
+          onclick="quickActionWithPrompt('POST', '/api/v1/playback/set-rating', 'rating', 1, 'Enter rating: -1 (dislike), 0 (unset), 1 (like)')"
+        >
+          Set Rating
+        </div>
+
+        <h2>Apple Music API</h2>
+        <div
+          class="endpoint"
+          onclick="quickAction('POST', '/api/v1/amapi/run-v3', {path: '/v1/me/library/songs'})"
+        >
+          Library Songs
+        </div>
+        <div
+          class="endpoint"
+          onclick="quickAction('POST', '/api/v1/amapi/run-v3', {path: '/v1/me/library/playlists'})"
+        >
+          Playlists
+        </div>
+        <div
+          class="endpoint"
+          onclick="quickAction('POST', '/api/v1/amapi/run-v3', {path: '/v1/me/recent/played'})"
+        >
+          Recently Played
+        </div>
+        <div
+          class="endpoint"
+          onclick="quickAction('POST', '/api/v1/amapi/run-v3', {path: '/v1/me/library/albums'})"
+        >
+          Library Albums
+        </div>
+        <div
+          class="endpoint"
+          onclick="quickAction('POST', '/api/v1/amapi/run-v3', {path: '/v1/me/library/artists'})"
+        >
+          Library Artists
+        </div>
+      </div>
+
+      <div class="main">
+        <div class="now-playing">
+          <h3>Now Playing</h3>
+          <div id="nowPlayingInfo" class="track-info">Not playing</div>
+          <div class="controls">
+            <button onclick="quickAction('POST', '/api/v1/playback/previous')">
+              ⏮️
+            </button>
+            <button onclick="quickAction('POST', '/api/v1/playback/playpause')">
+              ⏯️
+            </button>
+            <button onclick="quickAction('POST', '/api/v1/playback/next')">
+              ⏭️
+            </button>
+            <button onclick="refreshNowPlaying()">🔄</button>
+          </div>
+          <div class="volume-control">
+            <span>🔊</span>
+            <input
+              type="range"
+              id="volumeSlider"
+              min="0"
+              max="100"
+              value="50"
+              oninput="updateVolumeDisplay(this.value)"
+              onchange="setVolume(this.value)"
+            />
+            <span id="volumeValue">50%</span>
+            <button
+              onclick="getVolume()"
+              style="padding: 5px 10px; margin-left: 10px"
+            >
+              🔄
+            </button>
+          </div>
+        </div>
+
+        <div class="search-section">
+          <h3>Search</h3>
+          <div class="form-group">
+            <input
+              type="text"
+              id="searchQuery"
+              placeholder="Search songs, artists, albums..."
+              onkeypress="if(event.key==='Enter') search()"
+            />
+            <button onclick="search()" style="margin-top: 10px">
+              🔍 Search
+            </button>
+          </div>
+          <div id="searchResults" class="search-results"></div>
+        </div>
+
+        <h3>Manual Request</h3>
+        <div class="form-group">
+          <label>Method</label>
+          <select id="method">
+            <option>GET</option>
+            <option>POST</option>
+            <option>PUT</option>
+            <option>DELETE</option>
+            <option>PATCH</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Endpoint</label>
+          <input
+            type="text"
+            id="endpoint"
+            placeholder="/api/v1/playback/now-playing"
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Body (JSON)</label>
+          <textarea id="body" placeholder='{"key": "value"}'></textarea>
+        </div>
+
+        <button onclick="sendRequest()">Send Request</button>
+
+        <div id="response" class="response" style="display: none">
+          <div id="statusCode"></div>
+          <pre id="responseData"></pre>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function setEndpoint(method, endpoint, body = "") {
+        document.getElementById("method").value = method;
+        document.getElementById("endpoint").value = endpoint;
+        document.getElementById("body").value = body;
+      }
+
+      async function quickAction(method, endpoint, body = null) {
+        const baseUrl = document.getElementById("baseUrl").value;
+        const apiToken = document.getElementById("apiToken").value;
+
+        const options = {
+          method: method,
+          headers: {},
+        };
+
+        if (apiToken) {
+          options.headers["apitoken"] = apiToken;
+        }
+
+        if (body && method === "POST") {
+          options.headers["Content-Type"] = "application/json";
+          options.body = JSON.stringify(body);
+        }
+
+        console.log("Request:", method, baseUrl + endpoint, options);
+
+        try {
+          const response = await fetch(baseUrl + endpoint, options);
+          console.log("Response:", response.status, response.statusText);
+
+          if (response.status === 403) {
+            document.getElementById(
+              "statusCode"
+            ).innerHTML = `<span class="status status-error">403 Forbidden</span>`;
+            document.getElementById("responseData").textContent =
+              `🔒 API Token authentication failed\n\n` +
+              `Solution：\n` +
+              `1. Generate in Cider API Token：\n` +
+              `   Settings → Connectivity → Manage External Application Access\n` +
+              `2. Copy token to "API Token" field\n` +
+              `3. Or disable "Require API Tokens" and restart Cider`;
+            document.getElementById("response").style.display = "block";
+            return;
+          }
+
+          const data = await response.text();
+
+          let formattedData;
+          try {
+            formattedData = JSON.stringify(JSON.parse(data), null, 2);
+          } catch {
+            formattedData = data || "No response body";
+          }
+
+          document.getElementById(
+            "statusCode"
+          ).innerHTML = `<span class="status status-${
+            response.ok ? "200" : "error"
+          }">${response.status} ${response.statusText}</span>`;
+          document.getElementById("responseData").textContent = formattedData;
+          document.getElementById("response").style.display = "block";
+        } catch (error) {
+          console.error("Fetch error:", error);
+          document.getElementById(
+            "statusCode"
+          ).innerHTML = `<span class="status status-error">Network Error</span>`;
+          document.getElementById("responseData").textContent =
+            `Error: ${error.message}\n\n` +
+            `Please check：\n` +
+            `1. Cider running？\n` +
+            `2. RPC enabled？(Settings -> Connectivity)\n` +
+            `3. Base URL correct？(${baseUrl})\n` +
+            `4. If using API Token, ensure it is set correctly`;
+          document.getElementById("response").style.display = "block";
+        }
+      }
+
+      async function quickActionWithPrompt(
+        method,
+        endpoint,
+        key,
+        defaultValue,
+        promptText
+      ) {
+        const value = prompt(promptText, defaultValue);
+        if (value === null) return; // User cancelled
+
+        const numValue = parseFloat(value);
+        if (isNaN(numValue)) {
+          alert("Please enter a valid number");
+          return;
+        }
+
+        const body = {};
+        body[key] = numValue;
+        await quickAction(method, endpoint, body);
+      }
+
+      async function sendRequest() {
+        const method = document.getElementById("method").value;
+        const endpoint = document.getElementById("endpoint").value;
+        const bodyText = document.getElementById("body").value;
+        const baseUrl = document.getElementById("baseUrl").value;
+        const apiToken = document.getElementById("apiToken").value;
+
+        if (!endpoint) {
+          alert("Please enter endpoint");
+          return;
+        }
+
+        const options = {
+          method: method,
+          headers: {},
+        };
+
+        if (apiToken) {
+          options.headers["apitoken"] = apiToken;
+        }
+
+        if (method !== "GET" && bodyText) {
+          try {
+            const bodyJson = JSON.parse(bodyText);
+            options.headers["Content-Type"] = "application/json";
+            options.body = JSON.stringify(bodyJson);
+          } catch (e) {
+            alert("Invalid JSON body");
+            return;
+          }
+        }
+
+        try {
+          const response = await fetch(baseUrl + endpoint, options);
+          const data = await response.text();
+
+          let formattedData;
+          try {
+            formattedData = JSON.stringify(JSON.parse(data), null, 2);
+          } catch {
+            formattedData = data;
+          }
+
+          document.getElementById(
+            "statusCode"
+          ).innerHTML = `<span class="status status-${
+            response.ok ? "200" : "error"
+          }">${response.status} ${response.statusText}</span>`;
+          document.getElementById("responseData").textContent = formattedData;
+          document.getElementById("response").style.display = "block";
+
+          if (endpoint.includes("now-playing")) {
+            try {
+              updateNowPlaying(JSON.parse(data));
+            } catch (e) {}
+          }
+        } catch (error) {
+          document.getElementById(
+            "statusCode"
+          ).innerHTML = `<span class="status status-error">Error</span>`;
+          document.getElementById("responseData").textContent = error.message;
+          document.getElementById("response").style.display = "block";
+        }
+      }
+
+      async function getStorefront() {
+        const baseUrl = document.getElementById("baseUrl").value;
+        const apiToken = document.getElementById("apiToken").value;
+
+        const options = {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        };
+
+        if (apiToken) {
+          options.headers["apitoken"] = apiToken;
+        }
+
+        options.body = JSON.stringify({
+          path: "/v1/me/account?meta=subscription",
+        });
+
+        try {
+          const response = await fetch(
+            baseUrl + "/api/v1/amapi/run-v3",
+            options
+          );
+          const data = await response.json();
+
+          if (data?.data?.meta?.subscription?.storefront) {
+            const storefront = data.data.meta.subscription.storefront;
+            document.getElementById("storefront").value = storefront;
+            console.log("Storefront detected:", storefront);
+            return storefront;
+          } else {
+            console.warn("Failed to detect storefront, using default: tw");
+            return "tw";
+          }
+        } catch (error) {
+          console.error("Failed to get storefront:", error);
+          return "tw";
+        }
+      }
+
+      async function testConnection() {
+        const baseUrl = document.getElementById("baseUrl").value;
+        const apiToken = document.getElementById("apiToken").value;
+
+        const options = {
+          headers: {},
+        };
+
+        if (apiToken) {
+          options.headers["apitoken"] = apiToken;
+        }
+
+        try {
+          const response = await fetch(
+            baseUrl + "/api/v1/playback/active",
+            options
+          );
+          if (response.status === 204 || response.ok) {
+            alert("✅ Connection successful！Cider RPC running normally");
+          } else if (response.status === 403) {
+            alert(
+              "🔒 403 Forbidden - API Token authentication failed\n\n" +
+                "Please in Cider：\n" +
+                "Settings → Connectivity → Manage External Application Access\n" +
+                "Generate token and fill in sidebar field"
+            );
+          } else {
+            alert("⚠️ Connection error - Status: " + response.status);
+          }
+        } catch (error) {
+          alert(
+            "❌ Connection failed\n\n" +
+              "Please check：\n" +
+              "1. Cider running\n" +
+              "2. RPC enabled\n" +
+              "3. URL: " +
+              baseUrl +
+              "\n\n" +
+              "Error: " +
+              error.message
+          );
+        }
+      }
+
+      async function refreshNowPlaying() {
+        const baseUrl = document.getElementById("baseUrl").value;
+        const apiToken = document.getElementById("apiToken").value;
+
+        const options = {
+          method: "GET",
+          headers: {},
+        };
+
+        if (apiToken) {
+          options.headers["apitoken"] = apiToken;
+        }
+
+        try {
+          const response = await fetch(
+            baseUrl + "/api/v1/playback/now-playing",
+            options
+          );
+          if (response.ok) {
+            const data = await response.text();
+            try {
+              updateNowPlaying(JSON.parse(data));
+            } catch (e) {
+              console.error("Failed to update now playing", e);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to refresh now playing", error);
+        }
+      }
+
+      function updateNowPlaying(data) {
+        if (data && data.info) {
+          const info = data.info;
+          document.getElementById("nowPlayingInfo").innerHTML = `
+                    <strong>${info.name || "Unknown"}</strong><br>
+                    ${info.artistName || "Unknown Artist"} - ${
+            info.albumName || "Unknown Album"
+          }<br>
+                    <small>${formatTime(
+                      info.currentPlaybackTime
+                    )} / ${formatTime(info.durationInMillis / 1000)}</small>
+                `;
+        }
+      }
+
+      function formatTime(seconds) {
+        if (!seconds) return "0:00";
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, "0")}`;
+      }
+
+      function updateVolumeDisplay(value) {
+        document.getElementById("volumeValue").textContent = value + "%";
+      }
+
+      async function getVolume() {
+        const baseUrl = document.getElementById("baseUrl").value;
+        const apiToken = document.getElementById("apiToken").value;
+
+        const options = {
+          method: "GET",
+          headers: {},
+        };
+
+        if (apiToken) {
+          options.headers["apitoken"] = apiToken;
+        }
+
+        try {
+          const response = await fetch(
+            baseUrl + "/api/v1/playback/volume",
+            options
+          );
+          const data = await response.text();
+
+          let formattedData;
+          try {
+            const json = JSON.parse(data);
+            formattedData = JSON.stringify(json, null, 2);
+
+            // Update slider if volume is in response
+            if (json.volume !== undefined) {
+              const volumePercent = Math.round(json.volume * 100);
+              document.getElementById("volumeSlider").value = volumePercent;
+              document.getElementById("volumeValue").textContent =
+                volumePercent + "%";
+            }
+          } catch {
+            formattedData = data || "No response body";
+          }
+
+          document.getElementById(
+            "statusCode"
+          ).innerHTML = `<span class="status status-${
+            response.ok ? "200" : "error"
+          }">${response.status} ${response.statusText}</span>`;
+          document.getElementById("responseData").textContent = formattedData;
+          document.getElementById("response").style.display = "block";
+        } catch (error) {
+          console.error("Get volume error:", error);
+          alert("❌ Failed to get volume: " + error.message);
+        }
+      }
+
+      async function syncVolume() {
+        const baseUrl = document.getElementById("baseUrl").value;
+        const apiToken = document.getElementById("apiToken").value;
+
+        const options = {
+          method: "GET",
+          headers: {},
+        };
+
+        if (apiToken) {
+          options.headers["apitoken"] = apiToken;
+        }
+
+        try {
+          const response = await fetch(
+            baseUrl + "/api/v1/playback/volume",
+            options
+          );
+          const data = await response.text();
+
+          try {
+            const json = JSON.parse(data);
+            if (json.volume !== undefined) {
+              const volumePercent = Math.round(json.volume * 100);
+              document.getElementById("volumeSlider").value = volumePercent;
+              document.getElementById("volumeValue").textContent =
+                volumePercent + "%";
+            }
+          } catch (e) {
+            console.error("Failed to sync volume", e);
+          }
+        } catch (error) {
+          console.error("Sync volume error:", error);
+        }
+      }
+
+      async function setVolume(value) {
+        updateVolumeDisplay(value);
+        const result = await quickAction("POST", "/api/v1/playback/volume", {
+          volume: parseInt(value) / 100,
+        });
+        // Sync back after setting
+        setTimeout(syncVolume, 500);
+      }
+
+      async function search() {
+        const query = document.getElementById("searchQuery").value;
+        const storefront = document.getElementById("storefront").value || "tw";
+        if (!query) return;
+
+        const body = {
+          path: `/v1/catalog/${storefront}/search?term=${encodeURIComponent(
+            query
+          )}&types=songs,albums,artists&limit=10`,
+        };
+
+        await quickAction("POST", "/api/v1/amapi/run-v3", body);
+      }
+
+      async function playItem(id, type) {
+        await quickAction("POST", "/api/v1/playback/play-item", {
+          id: id.toString(),
+          type,
+        });
+      }
+
+      // Auto-refresh now playing every 5 seconds
+      let autoRefreshInterval;
+      function startAutoRefresh() {
+        autoRefreshInterval = setInterval(() => {
+          refreshNowPlaying();
+          syncVolume(); // Silent sync without output
+        }, 5000);
+        refreshNowPlaying();
+        syncVolume(); // Get initial volume silently
+        getStorefront(); // Detect storefront automatically
+      }
+
+      // Start auto-refresh after a short delay to allow connection
+      setTimeout(startAutoRefresh, 1000);
+    </script>
+  </body>
+</html>
