@@ -60,6 +60,12 @@ https://developer.apple.com/documentation/applemusicapi/get-a-recommendation
 - 新增 [Tracks] 到下一層 -> 載入並新增該歌手的所有[Track]到下一層（由新到舊）
 ```
 
+### 在 n-1 層按下`方向鍵右`到 n 層後
+
+- 在 n-1 層的選中的位置顯示 n-1 層 被選中 `[item]`的名稱，超出容器部分使顯示如下`examp..` `(example)`
+- 如果有 n-2, n-3 也同理
+- n-1 (n-2, n-3)的其他未被顯示的元素應該要隱藏
+
 ---
 
 ### `SearchBar`
