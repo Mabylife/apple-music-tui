@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { Box, useInput, useApp, useStdout } from "ink";
-import { Browser } from "./components/Browser";
-import { Player } from "./components/Player";
-import { CommandBar } from "./components/CommandBar";
-import { SearchBar } from "./components/SearchBar";
+import { Browser } from "./components/Browser.js";
+import { Player } from "./components/Player.js";
+import { CommandBar } from "./components/CommandBar.js";
+import { SearchBar } from "./components/SearchBar.js";
+import { CiderAPI, MusicItem } from "./services/api.js";
 
 interface Item {
   id: string;
   label: string;
+  type?: string;
+  rawData?: any;
 }
 
 interface LayerData {
@@ -18,25 +21,12 @@ interface LayerData {
 
 const MAX_LAYERS = 4;
 
-const generateItems = (count: number, prefix: string): Item[] => {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `${prefix}-${i}`,
-    label: `${prefix} Item ${i + 1}`,
-  }));
-};
-
 let layerIdCounter = 0;
 
 export const App: React.FC = () => {
   const { exit } = useApp();
   const { stdout } = useStdout();
-  const [layers, setLayers] = useState<LayerData[]>([
-    {
-      id: String(layerIdCounter++),
-      items: generateItems(20, "Initial"),
-      selectedIndex: 0,
-    },
-  ]);
+  const [layers, setLayers] = useState<LayerData[]>([]);
   const [activeLayerIndex, setActiveLayerIndex] = useState(0);
   const [terminalSize, setTerminalSize] = useState({
     width: stdout.columns || 100,
@@ -46,6 +36,40 @@ export const App: React.FC = () => {
   const [command, setCommand] = useState("");
   const [searchMode, setSearchMode] = useState(false);
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // Load recommendations function
+  const loadRecommendations = async () => {
+    try {
+      const items = await CiderAPI.getRecommendations(10);
+      setLayers([
+        {
+          id: String(layerIdCounter++),
+          items: items.map((item) => ({
+            id: item.id,
+            label: `${item.icon}  ${item.label}`,
+            type: item.type,
+            rawData: item.rawData,
+          })),
+          selectedIndex: 0,
+        },
+      ]);
+    } catch (error) {
+      console.error("Failed to load recommendations:", error);
+      setLayers([
+        {
+          id: String(layerIdCounter++),
+          items: [{ id: "error", label: "Error loading...", type: "error" }],
+          selectedIndex: 0,
+        },
+      ]);
+    }
+  };
+
+  // Load recommendations on mount
+  useEffect(() => {
+    loadRecommendations();
+  }, []);
 
   useEffect(() => {
     const updateSize = () => {
@@ -66,11 +90,16 @@ export const App: React.FC = () => {
   const isWide = terminalSize.width > 120;
 
   useInput((input: string, key: any) => {
+    // Always handle command mode and search mode first
     if (commandMode) {
       if (key.return) {
         // Execute command
         if (command === "q" || command === "quit" || command === "qa") {
           exit();
+        } else if (command === "home") {
+          // Reload recommendations
+          setActiveLayerIndex(0);
+          loadRecommendations();
         }
         setCommandMode(false);
         setCommand("");
@@ -88,6 +117,32 @@ export const App: React.FC = () => {
     if (searchMode) {
       if (key.return) {
         // Execute search
+        const query = search.trim();
+        if (query) {
+          setLoading(true);
+          CiderAPI.search(query, 10)
+            .then((items) => {
+              setLayers([
+                {
+                  id: String(layerIdCounter++),
+                  items: items.map((item) => ({
+                    id: item.id,
+                    label: `${item.icon}  ${item.label}`,
+                    type: item.type,
+                    rawData: item.rawData,
+                  })),
+                  selectedIndex: 0,
+                },
+              ]);
+              setActiveLayerIndex(0);
+            })
+            .catch((error) => {
+              console.error("Search failed:", error);
+            })
+            .finally(() => {
+              setLoading(false);
+            });
+        }
         setSearchMode(false);
         setSearch("");
       } else if (key.escape) {
@@ -101,6 +156,15 @@ export const App: React.FC = () => {
       return;
     }
 
+    // CRITICAL: Check for special keys BEFORE any other processing
+    // This prevents unnecessary re-renders on random input
+    const isSpecialKey = input === ":" || key.tab || key.upArrow || key.downArrow || key.rightArrow || key.leftArrow || key.backspace || key.delete;
+    if (!isSpecialKey) {
+      // Ignore all other input completely
+      return;
+    }
+
+    // Check for mode switches
     if (input === ":") {
       setCommandMode(true);
       setCommand("");
@@ -114,18 +178,84 @@ export const App: React.FC = () => {
     }
 
     if (key.rightArrow) {
-      // Add layer to the right
-      if (layers.length < MAX_LAYERS) {
-        const layerNumber = layers.length + 1;
-        const newLayer = {
-          id: String(layerIdCounter),
-          items: generateItems(15, `Layer ${layerNumber}`),
-          selectedIndex: 0,
-        };
-        layerIdCounter++;
-        setLayers((prev) => [...prev, newLayer]);
-        setActiveLayerIndex((prev) => prev + 1);
+      // Handle navigation to the right
+      const currentLayer = layers[activeLayerIndex];
+      if (!currentLayer || currentLayer.items.length === 0) return;
+
+      const selectedItem = currentLayer.items[currentLayer.selectedIndex];
+      if (!selectedItem) return;
+
+      const itemType = selectedItem.type;
+      const itemId = selectedItem.id;
+
+      // Check if it's a song (not a category) - play immediately without creating layer
+      if (itemType === "songs" && !selectedItem.rawData?.isTopTracks) {
+        CiderAPI.playItem(itemId, "songs").catch((error) => {
+          console.error("Failed to play song:", error);
+        });
+        return;
       }
+
+      // Check if it's a station - play immediately without creating layer
+      if (itemType === "stations") {
+        CiderAPI.playItem(itemId, "station").catch((error) => {
+          console.error("Failed to play station:", error);
+        });
+        return;
+      }
+
+      // For other types, check layer limit
+      if (layers.length >= MAX_LAYERS) return;
+
+      // Load next layer content
+      const loadNextLayer = async () => {
+        try {
+          let newItems: MusicItem[] = [];
+
+          if (itemType === "songs") {
+            // Must be Top Tracks category
+            if (selectedItem.rawData?.isTopTracks) {
+              const artistId = selectedItem.rawData.artistId;
+              newItems = await CiderAPI.getArtistTopTracks(artistId);
+            }
+          } else if (itemType === "albums") {
+            // Check if it's Albums category
+            if (selectedItem.rawData?.isAlbumsCategory) {
+              const artistId = selectedItem.rawData.artistId;
+              newItems = await CiderAPI.getArtistAlbums(artistId);
+            } else {
+              // Regular album - load tracks
+              newItems = await CiderAPI.getAlbumTracks(itemId);
+            }
+          } else if (itemType === "playlists") {
+            newItems = await CiderAPI.getPlaylistTracks(itemId);
+          } else if (itemType === "artists") {
+            newItems = await CiderAPI.getArtistContent(itemId);
+          }
+
+          if (newItems.length > 0) {
+            // Add new layer with loaded data
+            setLayers((prev) => [
+              ...prev,
+              {
+                id: String(layerIdCounter++),
+                items: newItems.map((item) => ({
+                  id: item.id,
+                  label: `${item.icon}  ${item.label}`,
+                  type: item.type,
+                  rawData: item.rawData,
+                })),
+                selectedIndex: 0,
+              },
+            ]);
+            setActiveLayerIndex((prev) => prev + 1);
+          }
+        } catch (error) {
+          console.error("Failed to load next layer:", error);
+        }
+      };
+
+      loadNextLayer();
     } else if (key.leftArrow || key.backspace || key.delete) {
       // Remove active layer (go back)
       if (layers.length > 1) {
@@ -138,67 +268,46 @@ export const App: React.FC = () => {
       }
     } else if (key.upArrow) {
       // Move selection up
-      setLayers((prev) => {
-        const newLayers = [...prev];
-        const currentLayer = newLayers[activeLayerIndex];
-        if (currentLayer) {
-          currentLayer.selectedIndex = Math.max(
-            0,
-            currentLayer.selectedIndex - 1
-          );
-        }
-        return newLayers;
-      });
+      const currentLayer = layers[activeLayerIndex];
+      if (currentLayer && currentLayer.selectedIndex > 0) {
+        setLayers((prev) => {
+          const newLayers = [...prev];
+          newLayers[activeLayerIndex] = {
+            ...currentLayer,
+            selectedIndex: currentLayer.selectedIndex - 1,
+          };
+          return newLayers;
+        });
+      }
     } else if (key.downArrow) {
       // Move selection down
-      setLayers((prev) => {
-        const newLayers = [...prev];
-        const currentLayer = newLayers[activeLayerIndex];
-        if (currentLayer) {
-          currentLayer.selectedIndex = Math.min(
-            currentLayer.items.length - 1,
-            currentLayer.selectedIndex + 1
-          );
-        }
-        return newLayers;
-      });
+      const currentLayer = layers[activeLayerIndex];
+      if (
+        currentLayer &&
+        currentLayer.selectedIndex < currentLayer.items.length - 1
+      ) {
+        setLayers((prev) => {
+          const newLayers = [...prev];
+          newLayers[activeLayerIndex] = {
+            ...currentLayer,
+            selectedIndex: currentLayer.selectedIndex + 1,
+          };
+          return newLayers;
+        });
+      }
     }
   });
 
   // Calculate player dimensions
   const commandBarHeight = 3;
 
-  // Terminal cells are usually 1:2 ratio (width:height in pixels)
-  // So to get visual 20:9 ratio, we need different cell count ratio
-
-  // For narrow mode: Player should be 20:9 aspect ratio VISUALLY
-  // Visual ratio: width:height = 20:9
-  // Since each cell is 1:2 (width:height), we need:
-  // (cells_width × 1) : (cells_height × 2) = 20 : 9
-  // cells_width : cells_height = 20 : 4.5 = 40 : 9
-  const playerWidthNarrow = terminalSize.width; // full width (e.g., 80)
-  const playerHeightNarrow = Math.floor((playerWidthNarrow * 9) / 40); // e.g., 80 → 18 cells (visually 20:9)
-
-  // Browser height for narrow mode
-  const browserHeightNarrow =
-    terminalSize.height - playerHeightNarrow - commandBarHeight;
+  const playerWidthNarrow = terminalSize.width;
+  const playerHeightNarrow = Math.floor((playerWidthNarrow * 9) / 40);
+  const browserHeightNarrow = terminalSize.height - playerHeightNarrow - commandBarHeight;
   const browserHeightWide = terminalSize.height - commandBarHeight;
-
-  // Calculate art size (1:1 ratio - always VISUALLY square)
-
-  // Wide mode: Art width is 100% of player inner width, height for visual square
-  // Visual square: art_visual_width = art_visual_height
-  // (art_width_cells × 1) = (art_height_cells × 2)
-  // art_height_cells = art_width_cells / 2
-  // Need to reduce slightly to account for borders
   const playerWidthWide = Math.floor(terminalSize.width * 0.35);
-  const artSizeWide = Math.floor(playerWidthWide / 2) - 4; // Reduce by 4 for borders
-
-  // Narrow mode: Art height is 100% of player inner height, width for visual square
-  // Visual square: art_visual_width = art_visual_height
-  // (art_width_cells × 1) = (art_height_cells × 2)
-  // art_width_cells = art_height_cells × 2
-  const artSizeNarrow = playerHeightNarrow * 2; // Simple: player height × 2
+  const artSizeWide = Math.floor(playerWidthWide / 2) - 4;
+  const artSizeNarrow = playerHeightNarrow * 2;
 
   return (
     <Box
@@ -222,8 +331,8 @@ export const App: React.FC = () => {
             activeLayerIndex={activeLayerIndex}
             terminalWidth={
               isWide
-                ? Math.floor(terminalSize.width * 0.65) // Don't subtract, let Browser handle it
-                : terminalSize.width // Don't subtract, let Browser handle it
+                ? Math.floor(terminalSize.width * 0.65)
+                : terminalSize.width
             }
             terminalHeight={isWide ? browserHeightWide : browserHeightNarrow}
             isWide={isWide}

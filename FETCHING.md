@@ -26,6 +26,8 @@ We use user navigation as the signal to send GET. <br />
 
 ### 第一層**預設**列出`使用者推薦內容`
 
+這一個頁面（第一層 + `使用者推薦內容` 稱作 `home`）
+
 ```
 Get a Recommendation
 Fetch a recommendation by using its identifier.

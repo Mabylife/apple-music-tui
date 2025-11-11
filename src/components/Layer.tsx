@@ -59,23 +59,23 @@ export const Layer: React.FC<LayerProps> = ({
       paddingX={isClosed ? 0 : 1}
       overflow="hidden"
     >
-      <Box flexDirection="column" flexGrow={1}>
+      <Box flexDirection="column" flexGrow={1} overflow="hidden" width={width - 2}>
         {visibleItems.map((item, index) => {
           const actualIndex = scrollOffset + index;
+          const displayText = isClosed
+            ? actualIndex === selectedIndex
+              ? " >"
+              : " "
+            : item.label;
+          
           return (
-            <Box key={item.id} paddingX={isClosed ? 0 : 0}>
+            <Box key={item.id} overflow="hidden">
               <Text
                 color={
                   actualIndex === selectedIndex && isActive ? "#ddd" : "gray"
                 }
-                backgroundColor={undefined}
-                wrap="truncate"
               >
-                {isClosed
-                  ? actualIndex === selectedIndex
-                    ? " >"
-                    : " "
-                  : item.label}
+                {displayText}
               </Text>
             </Box>
           );
@@ -84,3 +84,5 @@ export const Layer: React.FC<LayerProps> = ({
     </Box>
   );
 };
+
+Layer.displayName = 'Layer';

@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import { Box, Text } from "ink";
-import { Layer } from "./Layer";
-import { SearchBar } from "./SearchBar";
+import { Layer } from "./Layer.js";
+import { SearchBar } from "./SearchBar.js";
 
 interface Item {
   id: string;
@@ -35,25 +35,18 @@ export const Browser: React.FC<BrowserProps> = ({
 }) => {
   const closedCount = layers.length - 1;
   const closedWidthPercent = 20;
-
-  // Total available width for all layers
   const totalWidth = terminalWidth;
 
   const calculateWidth = (index: number): number => {
     const isActive = index === activeLayerIndex;
-
     if (isActive) {
-      // Active layer gets remaining space
-      const closedTotalWidth =
-        closedCount * Math.floor((totalWidth * closedWidthPercent) / 100);
+      const closedTotalWidth = closedCount * Math.floor((totalWidth * closedWidthPercent) / 100);
       return totalWidth - closedTotalWidth;
     } else {
-      // Closed layer gets fixed percentage
       return Math.floor((totalWidth * closedWidthPercent) / 100);
     }
   };
 
-  // Calculate available height for layers (subtract search bar height)
   const searchBarHeight = 3;
   const layerHeight = terminalHeight - searchBarHeight;
 
