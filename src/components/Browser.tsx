@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Box, Text } from "ink";
 import { Layer } from "./Layer";
+import { SearchBar } from "./SearchBar";
 
 interface Item {
   id: string;
@@ -19,6 +20,8 @@ interface BrowserProps {
   terminalWidth: number;
   terminalHeight: number;
   isWide: boolean;
+  search: string;
+  isSearchFocused: boolean;
 }
 
 export const Browser: React.FC<BrowserProps> = ({
@@ -27,6 +30,8 @@ export const Browser: React.FC<BrowserProps> = ({
   terminalWidth,
   terminalHeight,
   isWide,
+  search,
+  isSearchFocused,
 }) => {
   const closedCount = layers.length - 1;
   const closedWidthPercent = 20;
@@ -55,15 +60,8 @@ export const Browser: React.FC<BrowserProps> = ({
   return (
     <Box flexDirection="column" height="100%" width="100%" overflow="hidden">
       {/* Search Bar */}
-      <Box
-        borderStyle="single"
-        borderColor="gray"
-        paddingX={1}
-        height={searchBarHeight}
-        flexShrink={0}
-        marginRight={isWide ? 1 : 0}
-      >
-        <Text color="gray"> Search Here...</Text>
+      <Box marginRight={isWide ? 1 : 0} flexShrink={0}>
+        <SearchBar search={search} isFocused={isSearchFocused} />
       </Box>
 
       {/* Lists Container */}

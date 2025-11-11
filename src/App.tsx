@@ -3,6 +3,7 @@ import { Box, useInput, useApp, useStdout } from "ink";
 import { Browser } from "./components/Browser";
 import { Player } from "./components/Player";
 import { CommandBar } from "./components/CommandBar";
+import { SearchBar } from "./components/SearchBar";
 
 interface Item {
   id: string;
@@ -43,6 +44,8 @@ export const App: React.FC = () => {
   });
   const [commandMode, setCommandMode] = useState(false);
   const [command, setCommand] = useState("");
+  const [searchMode, setSearchMode] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const updateSize = () => {
@@ -66,7 +69,7 @@ export const App: React.FC = () => {
     if (commandMode) {
       if (key.return) {
         // Execute command
-        if (command === "q" || command === "quit") {
+        if (command === "q" || command === "quit" || command === "qa") {
           exit();
         }
         setCommandMode(false);
@@ -82,14 +85,31 @@ export const App: React.FC = () => {
       return;
     }
 
+    if (searchMode) {
+      if (key.return) {
+        // Execute search
+        setSearchMode(false);
+        setSearch("");
+      } else if (key.escape) {
+        setSearchMode(false);
+        setSearch("");
+      } else if (key.backspace || key.delete) {
+        setSearch((prev) => prev.slice(0, -1));
+      } else if (input && !key.ctrl && !key.meta && !key.tab) {
+        setSearch((prev) => prev + input);
+      }
+      return;
+    }
+
     if (input === ":") {
       setCommandMode(true);
       setCommand("");
       return;
     }
 
-    if (input === "q") {
-      exit();
+    if (key.tab) {
+      setSearchMode(true);
+      setSearch("");
       return;
     }
 
@@ -207,6 +227,8 @@ export const App: React.FC = () => {
             }
             terminalHeight={isWide ? browserHeightWide : browserHeightNarrow}
             isWide={isWide}
+            search={search}
+            isSearchFocused={searchMode}
           />
         </Box>
 

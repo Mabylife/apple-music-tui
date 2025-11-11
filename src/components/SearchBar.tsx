@@ -1,15 +1,12 @@
 import React from "react";
 import { Box, Text } from "ink";
 
-interface CommandBarProps {
-  command: string;
+interface SearchBarProps {
+  search: string;
   isFocused: boolean;
 }
 
-export const CommandBar: React.FC<CommandBarProps> = ({
-  command,
-  isFocused,
-}) => {
+export const SearchBar: React.FC<SearchBarProps> = ({ search, isFocused }) => {
   return (
     <Box
       borderStyle="single"
@@ -17,9 +14,10 @@ export const CommandBar: React.FC<CommandBarProps> = ({
       paddingX={1}
       height={3}
       flexShrink={0}
+      flexGrow={1}
     >
       <Text color={isFocused ? "#ddd" : "gray"}>
-        {isFocused ? `:${command}` : ":"}
+        {isFocused ? `  ${search}` : "  Use Tab to search"}
       </Text>
     </Box>
   );
