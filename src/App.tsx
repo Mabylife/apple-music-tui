@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, useInput, useApp, useStdout } from "ink";
+import { TerminalInfoProvider } from "ink-picture";
 import { Browser } from "./components/Browser.js";
 import { Player } from "./components/Player.js";
 import { CommandBar } from "./components/CommandBar.js";
@@ -104,21 +105,25 @@ export const App: React.FC = () => {
           setActiveLayerIndex(0);
           loadRecommendations();
         } else if (command === "stop") {
-          PlayerAPI.stop().then(() => {
-            setPlayerUpdateTrigger(prev => prev + 1);
-          }).catch((error) => {
-            console.error("Failed to stop:", error);
-          });
+          PlayerAPI.stop()
+            .then(() => {
+              setPlayerUpdateTrigger((prev) => prev + 1);
+            })
+            .catch((error) => {
+              console.error("Failed to stop:", error);
+            });
         } else if (command.startsWith("vol ")) {
           const vol = parseInt(command.substring(4));
           if (!isNaN(vol) && vol >= 0 && vol <= 100) {
-            PlayerAPI.setVolume(vol / 100).then(() => {
-              setMessage(`Volume ${vol}`);
-              setPlayerUpdateTrigger(prev => prev + 1);
-              setTimeout(() => setMessage(""), 2000);
-            }).catch((error) => {
-              console.error("Failed to set volume:", error);
-            });
+            PlayerAPI.setVolume(vol / 100)
+              .then(() => {
+                setMessage(`Volume ${vol}`);
+                setPlayerUpdateTrigger((prev) => prev + 1);
+                setTimeout(() => setMessage(""), 2000);
+              })
+              .catch((error) => {
+                console.error("Failed to set volume:", error);
+              });
           }
         }
         setCommandMode(false);
@@ -178,49 +183,66 @@ export const App: React.FC = () => {
 
     // CRITICAL: Check for special keys BEFORE any other processing
     // This prevents unnecessary re-renders on random input
-    const isSpecialKey = input === ":" || input === " " || key.tab || key.upArrow || key.downArrow || key.rightArrow || key.leftArrow || key.backspace || key.delete;
-    
+    const isSpecialKey =
+      input === ":" ||
+      input === " " ||
+      key.tab ||
+      key.upArrow ||
+      key.downArrow ||
+      key.rightArrow ||
+      key.leftArrow ||
+      key.backspace ||
+      key.delete;
+
     // Handle global playback controls
     if (key.ctrl) {
       if (key.leftArrow) {
-        PlayerAPI.previous().then(() => {
-          setPlayerUpdateTrigger(prev => prev + 1);
-        }).catch((error) => {
-          console.error("Failed to go previous:", error);
-        });
+        PlayerAPI.previous()
+          .then(() => {
+            setPlayerUpdateTrigger((prev) => prev + 1);
+          })
+          .catch((error) => {
+            console.error("Failed to go previous:", error);
+          });
         return;
       } else if (key.rightArrow) {
-        PlayerAPI.next().then(() => {
-          setPlayerUpdateTrigger(prev => prev + 1);
-        }).catch((error) => {
-          console.error("Failed to go next:", error);
-        });
+        PlayerAPI.next()
+          .then(() => {
+            setPlayerUpdateTrigger((prev) => prev + 1);
+          })
+          .catch((error) => {
+            console.error("Failed to go next:", error);
+          });
         return;
       } else if (input === "s" || input === "S" || input === "\x13") {
-        PlayerAPI.toggleShuffle().then(() => {
-          setPlayerUpdateTrigger(prev => prev + 1);
-        }).catch((error) => {
-          console.error("Failed to toggle shuffle:", error);
-        });
+        PlayerAPI.toggleShuffle()
+          .then(() => {
+            setPlayerUpdateTrigger((prev) => prev + 1);
+          })
+          .catch((error) => {
+            console.error("Failed to toggle shuffle:", error);
+          });
         return;
       } else if (input === "r" || input === "R" || input === "\x12") {
-        PlayerAPI.toggleRepeat().then(() => {
-          setPlayerUpdateTrigger(prev => prev + 1);
-        }).catch((error) => {
-          console.error("Failed to toggle repeat:", error);
-        });
+        PlayerAPI.toggleRepeat()
+          .then(() => {
+            setPlayerUpdateTrigger((prev) => prev + 1);
+          })
+          .catch((error) => {
+            console.error("Failed to toggle repeat:", error);
+          });
         return;
       } else if (key.upArrow || input === "+") {
         // Volume up by 5%
         fetch("http://localhost:10767/api/v1/playback/volume")
-          .then(res => res.json())
+          .then((res) => res.json())
           .then((data: any) => {
             const currentVol = data.volume || 0;
             const newVol = Math.min(1, currentVol + 0.05);
             return PlayerAPI.setVolume(newVol);
           })
           .then(() => {
-            setPlayerUpdateTrigger(prev => prev + 1);
+            setPlayerUpdateTrigger((prev) => prev + 1);
           })
           .catch((error) => {
             console.error("Failed to increase volume:", error);
@@ -229,14 +251,14 @@ export const App: React.FC = () => {
       } else if (key.downArrow || input === "-") {
         // Volume down by 5%
         fetch("http://localhost:10767/api/v1/playback/volume")
-          .then(res => res.json())
+          .then((res) => res.json())
           .then((data: any) => {
             const currentVol = data.volume || 0;
             const newVol = Math.max(0, currentVol - 0.05);
             return PlayerAPI.setVolume(newVol);
           })
           .then(() => {
-            setPlayerUpdateTrigger(prev => prev + 1);
+            setPlayerUpdateTrigger((prev) => prev + 1);
           })
           .catch((error) => {
             console.error("Failed to decrease volume:", error);
@@ -244,17 +266,19 @@ export const App: React.FC = () => {
         return;
       }
     }
-    
+
     // Space for play/pause
     if (input === " ") {
-      PlayerAPI.playPause().then(() => {
-        setPlayerUpdateTrigger(prev => prev + 1);
-      }).catch((error) => {
-        console.error("Failed to play/pause:", error);
-      });
+      PlayerAPI.playPause()
+        .then(() => {
+          setPlayerUpdateTrigger((prev) => prev + 1);
+        })
+        .catch((error) => {
+          console.error("Failed to play/pause:", error);
+        });
       return;
     }
-    
+
     if (!isSpecialKey) {
       // Ignore all other input completely
       return;
@@ -399,62 +423,68 @@ export const App: React.FC = () => {
 
   const playerWidthNarrow = terminalSize.width;
   const playerHeightNarrow = Math.floor((playerWidthNarrow * 9) / 40);
-  const browserHeightNarrow = terminalSize.height - playerHeightNarrow - commandBarHeight;
+  const browserHeightNarrow =
+    terminalSize.height - playerHeightNarrow - commandBarHeight;
   const browserHeightWide = terminalSize.height - commandBarHeight;
   const playerWidthWide = Math.floor(terminalSize.width * 0.35);
   const artSizeWide = Math.floor(playerWidthWide / 2) - 4;
   const artSizeNarrow = playerHeightNarrow * 2;
 
   return (
-    <Box
-      flexDirection="column"
-      width={terminalSize.width}
-      height={terminalSize.height}
-    >
+    <TerminalInfoProvider>
       <Box
-        flexDirection={isWide ? "row" : "column-reverse"}
-        flexGrow={1}
-        overflow="hidden"
+        flexDirection="column"
+        width={terminalSize.width}
+        height={terminalSize.height}
       >
-        {/* Browser */}
         <Box
-          width={isWide ? "65%" : "100%"}
-          flexGrow={isWide ? 0 : 1}
+          flexDirection={isWide ? "row" : "column-reverse"}
+          flexGrow={1}
           overflow="hidden"
         >
-          <Browser
-            layers={layers}
-            activeLayerIndex={activeLayerIndex}
-            terminalWidth={
-              isWide
-                ? Math.floor(terminalSize.width * 0.65)
-                : terminalSize.width
-            }
-            terminalHeight={isWide ? browserHeightWide : browserHeightNarrow}
-            isWide={isWide}
-            search={search}
-            isSearchFocused={searchMode}
-          />
+          {/* Browser */}
+          <Box
+            width={isWide ? "65%" : "100%"}
+            flexGrow={isWide ? 0 : 1}
+            overflow="hidden"
+          >
+            <Browser
+              layers={layers}
+              activeLayerIndex={activeLayerIndex}
+              terminalWidth={
+                isWide
+                  ? Math.floor(terminalSize.width * 0.65)
+                  : terminalSize.width
+              }
+              terminalHeight={isWide ? browserHeightWide : browserHeightNarrow}
+              isWide={isWide}
+              search={search}
+              isSearchFocused={searchMode}
+            />
+          </Box>
+
+          {/* Player */}
+          <Box
+            width={isWide ? "35%" : "100%"}
+            height={isWide ? undefined : playerHeightNarrow}
+            flexGrow={isWide ? 1 : 0}
+            flexShrink={0}
+            overflow="hidden"
+          >
+            <Player
+              isWide={isWide}
+              artSize={isWide ? artSizeWide : artSizeNarrow}
+              updateTrigger={playerUpdateTrigger}
+            />
+          </Box>
         </Box>
 
-        {/* Player */}
-        <Box
-          width={isWide ? "35%" : "100%"}
-          height={isWide ? undefined : playerHeightNarrow}
-          flexGrow={isWide ? 1 : 0}
-          flexShrink={0}
-          overflow="hidden"
-        >
-          <Player
-            isWide={isWide}
-            artSize={isWide ? artSizeWide : artSizeNarrow}
-            updateTrigger={playerUpdateTrigger}
-          />
-        </Box>
+        {/* Command Bar */}
+        <CommandBar
+          command={message || command}
+          isFocused={commandMode || message !== ""}
+        />
       </Box>
-
-      {/* Command Bar */}
-      <CommandBar command={message || command} isFocused={commandMode || message !== ""} />
-    </Box>
+    </TerminalInfoProvider>
   );
 };

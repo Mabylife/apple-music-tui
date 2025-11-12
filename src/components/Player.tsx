@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Box, Text } from "ink";
+import { Box, Text, useStdout } from "ink";
 import { SocketService, NowPlayingData } from "../services/socket";
+import Image from "ink-picture";
 
 interface PlayerProps {
   isWide: boolean;
@@ -10,6 +11,7 @@ interface PlayerProps {
 
 export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
   const [nowPlaying, setNowPlaying] = useState<NowPlayingData | null>(null);
+  const { stdout } = useStdout();
 
   useEffect(() => {
     SocketService.connect();
@@ -57,6 +59,19 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
     };
   }, [nowPlaying]);
 
+  // Calculate image dimensions based on terminal and artSize
+  // Account for borders (2 chars wide, 2 lines high)
+  const terminalWidth = stdout.columns || 120;
+  const terminalHeight = stdout.rows || 80;
+  const playerWidthWide = Math.floor(terminalWidth * 0.35);
+  const playerWidthNarrow = terminalWidth;
+  const playerHeightNarrow = Math.floor((playerWidthNarrow * 9) / 40);
+  
+  // Wide mode: artSize is HEIGHT, image should fill full player width
+  // Narrow mode: artSize is WIDTH, image should fill available height
+  const imageWidth = isWide ? playerWidthWide - 4 : artSize - 2;
+  const imageHeight = isWide ? artSize - 2 : playerHeightNarrow - 2;
+
   if (isWide) {
     // Wide mode: Vertical layout (column)
     return (
@@ -73,12 +88,16 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
           width="100%"
           height={artSize}
           borderStyle="single"
-          justifyContent="center"
-          alignItems="center"
-          flexShrink={0}
           borderColor="gray"
+          flexShrink={0}
+          overflow="hidden"
         >
-          <Text color="gray">ART</Text>
+          <Image
+            src="/home/mabylife/Documents/GitHub/apple-music-tui/testArt.png"
+            protocol="halfBlock"
+            width={imageWidth}
+            height={imageHeight}
+          />
         </Box>
 
         {/* Info */}
@@ -116,12 +135,16 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
           width={artSize}
           height="100%"
           borderStyle="single"
-          justifyContent="center"
-          alignItems="center"
-          flexShrink={0}
           borderColor="gray"
+          flexShrink={0}
+          overflow="hidden"
         >
-          <Text color="gray">ART</Text>
+          <Image
+            src="/home/mabylife/Documents/GitHub/apple-music-tui/testArt.png"
+            protocol="halfBlock"
+            width={imageWidth}
+            height={imageHeight}
+          />
         </Box>
 
         {/* Info */}
