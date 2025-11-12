@@ -66,11 +66,16 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
   const playerWidthWide = Math.floor(terminalWidth * 0.35);
   const playerWidthNarrow = terminalWidth;
   const playerHeightNarrow = Math.floor((playerWidthNarrow * 9) / 40);
-  
+
   // Wide mode: artSize is HEIGHT, image should fill full player width
   // Narrow mode: artSize is WIDTH, image should fill available height
   const imageWidth = isWide ? playerWidthWide - 4 : artSize - 2;
   const imageHeight = isWide ? artSize - 2 : playerHeightNarrow - 2;
+
+  // Get artwork URL from nowPlaying data, fallback to test image
+  const artworkUrl = nowPlaying?.artwork?.url
+    ? nowPlaying.artwork.url.replace("{w}", "640").replace("{h}", "640")
+    : "/home/mabylife/Documents/GitHub/apple-music-tui/testArt.png";
 
   if (isWide) {
     // Wide mode: Vertical layout (column)
@@ -93,7 +98,7 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
           overflow="hidden"
         >
           <Image
-            src="/home/mabylife/Documents/GitHub/apple-music-tui/testArt.png"
+            src={artworkUrl}
             protocol="halfBlock"
             width={imageWidth}
             height={imageHeight}
@@ -140,7 +145,7 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
           overflow="hidden"
         >
           <Image
-            src="/home/mabylife/Documents/GitHub/apple-music-tui/testArt.png"
+            src={artworkUrl}
             protocol="halfBlock"
             width={imageWidth}
             height={imageHeight}
@@ -152,18 +157,18 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
           flexGrow={1}
           borderStyle="single"
           borderColor="gray"
-          justifyContent="center"
-          alignItems="center"
+          justifyContent="flex-start"
+          alignItems="flex-start"
           flexDirection="column"
           marginLeft={1}
           paddingX={1}
         >
-          <Text bold color="cyan">
+          <Text bold color="#ddd">
             {displayInfo.trackName}
           </Text>
-          <Text color="yellow">{displayInfo.artistName}</Text>
+          <Text color="gray">{displayInfo.artistName}</Text>
           <Text color="gray">{displayInfo.albumName}</Text>
-          <Text color="green">{displayInfo.timeDisplay}</Text>
+          <Text color="#ddd">{displayInfo.timeDisplay}</Text>
         </Box>
       </Box>
     );

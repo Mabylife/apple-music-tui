@@ -10,6 +10,11 @@ export interface NowPlayingData {
   currentPlaybackTime?: number;
   playbackProgress?: number;
   status?: string;
+  artwork?: {
+    url?: string;
+    width?: number;
+    height?: number;
+  };
 }
 
 export interface PlaybackTimeData {
@@ -98,6 +103,7 @@ export class SocketService {
           albumName: info.albumName,
           durationInMillis: info.durationInMillis,
           currentPlaybackTime: info.currentPlaybackTime,
+          artwork: info.artwork,
         };
         
         // Always notify to keep time updated
