@@ -2,6 +2,8 @@
 
 This data will explain how the data fetching in this TUI app works.
 
+[測試完成的 API 動作](/api-test.html)，強烈建議參考
+
 ## Get Lists data
 
 ### 術語說明
@@ -95,3 +97,41 @@ async function search() {
   await quickAction("POST", "/api/v1/amapi/run-v3", body);
 }
 ```
+
+## Get Player / Post Playback Command
+
+### Reference
+
+[Cider RPC](/cider-rpc-document.md)
+[AM APIs](https://developer.apple.com/documentation/applemusicapi)
+
+### Player Live Playing
+
+Use Socket.IO Channels to update the info on Player
+
+```
+Socket.IO Channels
+    API:Playback - Live Now Playing Feed (readonly)
+```
+
+### 需要實現的 Playback 功能
+
+- `Space` -> Play/Pause
+
+- `:stop` -> Stop the player
+
+- `Ctrl` + `ArrowLeft` / `ArrowRight` -> Next Track / Prev Track
+
+- `Ctrl + S ` -> Toggle Shuffle Mode
+
+  - 在 `CommandBar` 顯示 [Shuffle Mode `off / on`]
+
+- `Ctrl + R ` -> Toggle Repeat Mode
+
+  - 在 `CommandBar` 顯示 [Repeat Mode `This track / Repeat / Off`]
+
+- `Ctrl` + `+ / -` / `Ctrl` + `ArrowUp` / `Arrow Down` -> Volumn Up / Down
+
+  - 在 `CommandBar` 顯示 [Volumn `69`]
+
+- `:vol 69` -> Volumn set to `69`
