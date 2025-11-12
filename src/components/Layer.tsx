@@ -56,33 +56,68 @@ export const Layer: React.FC<LayerProps> = ({
       borderStyle="single"
       borderColor={isActive ? "gray" : "gray"}
       flexDirection="column"
-      paddingX={isClosed ? 0 : 1}
+      paddingX={1}
       overflow="hidden"
     >
-      <Box flexDirection="column" flexGrow={1} overflow="hidden" width={width - 2}>
-        {visibleItems.map((item, index) => {
-          const actualIndex = scrollOffset + index;
-          const displayText = isClosed
-            ? actualIndex === selectedIndex
-              ? " >"
-              : " "
-            : item.label;
-          
-          return (
-            <Box key={item.id} overflow="hidden">
-              <Text
-                color={
-                  actualIndex === selectedIndex && isActive ? "#ddd" : "gray"
-                }
-              >
-                {displayText}
-              </Text>
+      <Box
+        flexDirection="column"
+        flexGrow={1}
+        overflow="hidden"
+        width={width - 2}
+      >
+        {isClosed ? (
+          // When closed, show the selected item at its original position
+          <>
+            {Array.from({ length: selectedIndex - scrollOffset }).map(
+              (_, i) => (
+                <Box key={`spacer-${i}`} overflow="hidden">
+                  <Text> </Text>
+                </Box>
+              )
+            )}
+            <Box overflow="hidden">
+              {(() => {
+                const label = items[selectedIndex]?.label || "";
+                const maxTextWidth = width - 4; // Account for borders and padding
+                const truncatedLabel =
+                  label.length > maxTextWidth
+                    ? label.slice(0, maxTextWidth - 3) + "..."
+                    : label;
+                return (
+                  <Text color="gray" wrap="truncate-end">
+                    {truncatedLabel}
+                  </Text>
+                );
+              })()}
             </Box>
-          );
-        })}
+          </>
+        ) : (
+          // When open, show all visible items with truncation
+          visibleItems.map((item, index) => {
+            const actualIndex = scrollOffset + index;
+            const maxTextWidth = width - 4; // Account for borders and padding
+            const truncatedLabel =
+              item.label.length > maxTextWidth
+                ? item.label.slice(0, maxTextWidth - 3) + "..."
+                : item.label;
+
+            return (
+              <Box key={item.id} overflow="hidden">
+                <Text
+                  color={
+                    actualIndex === selectedIndex && isActive ? "white" : "gray"
+                  }
+                  wrap="truncate-end"
+                >
+                  {truncatedLabel}
+                </Text>
+              </Box>
+            );
+          })
+        )}
       </Box>
     </Box>
   );
 };
 
-Layer.displayName = 'Layer';
+Layer.displayName = "Layer";

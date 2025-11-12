@@ -40,7 +40,8 @@ export const Browser: React.FC<BrowserProps> = ({
   const calculateWidth = (index: number): number => {
     const isActive = index === activeLayerIndex;
     if (isActive) {
-      const closedTotalWidth = closedCount * Math.floor((totalWidth * closedWidthPercent) / 100);
+      const closedTotalWidth =
+        closedCount * Math.floor((totalWidth * closedWidthPercent) / 100);
       return totalWidth - closedTotalWidth;
     } else {
       return Math.floor((totalWidth * closedWidthPercent) / 100);

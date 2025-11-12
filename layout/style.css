@@ -109,7 +109,7 @@ body {
 
 .layer .item {
   padding: 0.5rem 0.75rem;
-  color: #ddd;
+  color: white;
   background: transparent;
   cursor: default;
   user-select: none;

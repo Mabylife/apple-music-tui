@@ -13,12 +13,12 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   return (
     <Box
       borderStyle="single"
-      borderColor={isFocused ? "#ddd" : "gray"}
+      borderColor={isFocused ? "white" : "gray"}
       paddingX={1}
       height={3}
       flexShrink={0}
     >
-      <Text color={isFocused ? "#ddd" : "gray"}>
+      <Text color={isFocused ? "white" : "gray"}>
         {isFocused ? `:${command}` : ":"}
       </Text>
     </Box>

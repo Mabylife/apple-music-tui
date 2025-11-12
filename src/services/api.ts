@@ -36,7 +36,7 @@ export class CiderAPI {
     return text ? JSON.parse(text) : {};
   }
 
-  static async getRecommendations(limit: number = 10): Promise<MusicItem[]> {
+  static async getRecommendations(limit: number = 10, layerIndex: number = 0): Promise<MusicItem[]> {
     const result = await this.request("POST", "/api/v1/amapi/run-v3", {
       path: `/v1/me/recommendations?limit=${limit}`,
     });
@@ -48,7 +48,7 @@ export class CiderAPI {
     for (const rec of recommendations) {
       const contents = rec.relationships?.contents?.data || [];
       for (const item of contents.slice(0, 10)) {
-        const parsed = this.parseItem(item);
+        const parsed = this.parseItem(item, layerIndex);
         // Filter out stations - they cause rendering issues
         // Also filter out duplicates
         if (parsed.type !== "stations" && !seenIds.has(parsed.id)) {
@@ -62,7 +62,7 @@ export class CiderAPI {
     return items.slice(0, 10);
   }
 
-  static async search(query: string, limit: number = 10): Promise<MusicItem[]> {
+  static async search(query: string, limit: number = 10, layerIndex: number = 0): Promise<MusicItem[]> {
     const result = await this.request("POST", "/api/v1/amapi/run-v3", {
       path: `/v1/catalog/${STOREFRONT}/search?term=${encodeURIComponent(
         query
@@ -75,7 +75,7 @@ export class CiderAPI {
     // Add artists first (most general)
     if (results.artists?.data) {
       for (const item of results.artists.data) {
-        items.push(this.parseItem(item));
+        items.push(this.parseItem(item, layerIndex));
         if (items.length >= limit) break;
       }
     }
@@ -83,7 +83,7 @@ export class CiderAPI {
     // Add albums
     if (results.albums?.data) {
       for (const item of results.albums.data) {
-        items.push(this.parseItem(item));
+        items.push(this.parseItem(item, layerIndex));
         if (items.length >= limit) break;
       }
     }
@@ -91,7 +91,7 @@ export class CiderAPI {
     // Add songs
     if (results.songs?.data) {
       for (const item of results.songs.data) {
-        items.push(this.parseItem(item));
+        items.push(this.parseItem(item, layerIndex));
         if (items.length >= limit) break;
       }
     }
@@ -99,7 +99,7 @@ export class CiderAPI {
     return items.slice(0, limit);
   }
 
-  static async getAlbumTracks(albumId: string): Promise<MusicItem[]> {
+  static async getAlbumTracks(albumId: string, layerIndex: number = 2): Promise<MusicItem[]> {
     const result = await this.request("POST", "/api/v1/amapi/run-v3", {
       path: `/v1/catalog/${STOREFRONT}/albums/${albumId}`,
     });
@@ -107,10 +107,10 @@ export class CiderAPI {
     const album = result?.data?.data?.[0];
     const tracks = album?.relationships?.tracks?.data || [];
 
-    return tracks.map((track: any) => this.parseItem(track));
+    return tracks.map((track: any) => this.parseItem(track, layerIndex));
   }
 
-  static async getPlaylistTracks(playlistId: string): Promise<MusicItem[]> {
+  static async getPlaylistTracks(playlistId: string, layerIndex: number = 2): Promise<MusicItem[]> {
     const result = await this.request("POST", "/api/v1/amapi/run-v3", {
       path: `/v1/catalog/${STOREFRONT}/playlists/${playlistId}`,
     });
@@ -118,7 +118,7 @@ export class CiderAPI {
     const playlist = result?.data?.data?.[0];
     const tracks = playlist?.relationships?.tracks?.data || [];
 
-    return tracks.map((track: any) => this.parseItem(track));
+    return tracks.map((track: any) => this.parseItem(track, layerIndex));
   }
 
   static async getArtistContent(artistId: string): Promise<MusicItem[]> {
@@ -159,22 +159,22 @@ export class CiderAPI {
     return items;
   }
 
-  static async getArtistTopTracks(artistId: string): Promise<MusicItem[]> {
+  static async getArtistTopTracks(artistId: string, layerIndex: number = 2): Promise<MusicItem[]> {
     const result = await this.request("POST", "/api/v1/amapi/run-v3", {
       path: `/v1/catalog/${STOREFRONT}/artists/${artistId}/songs?limit=20`,
     });
 
     const tracks = result?.data?.data || [];
-    return tracks.map((track: any) => this.parseItem(track));
+    return tracks.map((track: any) => this.parseItem(track, layerIndex));
   }
 
-  static async getArtistAlbums(artistId: string): Promise<MusicItem[]> {
+  static async getArtistAlbums(artistId: string, layerIndex: number = 2): Promise<MusicItem[]> {
     const result = await this.request("POST", "/api/v1/amapi/run-v3", {
       path: `/v1/catalog/${STOREFRONT}/artists/${artistId}/albums?limit=100`,
     });
 
     const albums = result?.data?.data || [];
-    return albums.map((album: any) => this.parseItem(album));
+    return albums.map((album: any) => this.parseItem(album, layerIndex));
   }
 
   static async playItem(id: string, type: string): Promise<void> {
@@ -184,14 +184,18 @@ export class CiderAPI {
     });
   }
 
-  private static parseItem(item: any): MusicItem {
+  private static parseItem(item: any, layerIndex?: number): MusicItem {
     const type = item.type;
     let label = "";
     let icon = "";
 
     switch (type) {
       case "songs":
-        label = (item.attributes?.name || "Unknown Track") + " ";
+        const trackName = item.attributes?.name || "Unknown Track";
+        const artistName = item.attributes?.artistName || "";
+        // Only show artist name in first or second layer (index 0 or 1)
+        const shouldShowArtist = layerIndex !== undefined && layerIndex <= 1;
+        label = artistName && shouldShowArtist ? `${trackName} - ${artistName} ` : `${trackName} `;
         icon = "󰝚";
         break;
       case "albums":

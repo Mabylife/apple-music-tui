@@ -145,7 +145,7 @@ export const App: React.FC = () => {
         const query = search.trim();
         if (query) {
           setLoading(true);
-          CiderAPI.search(query, 10)
+          CiderAPI.search(query, 20)
             .then((items) => {
               setLayers([
                 {
@@ -331,24 +331,25 @@ export const App: React.FC = () => {
       const loadNextLayer = async () => {
         try {
           let newItems: MusicItem[] = [];
+          const nextLayerIndex = layers.length; // The new layer's index
 
           if (itemType === "songs") {
             // Must be Top Tracks category
             if (selectedItem.rawData?.isTopTracks) {
               const artistId = selectedItem.rawData.artistId;
-              newItems = await CiderAPI.getArtistTopTracks(artistId);
+              newItems = await CiderAPI.getArtistTopTracks(artistId, nextLayerIndex);
             }
           } else if (itemType === "albums") {
             // Check if it's Albums category
             if (selectedItem.rawData?.isAlbumsCategory) {
               const artistId = selectedItem.rawData.artistId;
-              newItems = await CiderAPI.getArtistAlbums(artistId);
+              newItems = await CiderAPI.getArtistAlbums(artistId, nextLayerIndex);
             } else {
               // Regular album - load tracks
-              newItems = await CiderAPI.getAlbumTracks(itemId);
+              newItems = await CiderAPI.getAlbumTracks(itemId, nextLayerIndex);
             }
           } else if (itemType === "playlists") {
-            newItems = await CiderAPI.getPlaylistTracks(itemId);
+            newItems = await CiderAPI.getPlaylistTracks(itemId, nextLayerIndex);
           } else if (itemType === "artists") {
             newItems = await CiderAPI.getArtistContent(itemId);
           }

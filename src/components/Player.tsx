@@ -39,6 +39,7 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
         artistName: "Unknown Artist",
         albumName: "Unknown Album",
         timeDisplay: "0:00 / 0:00",
+        colorTest: "red gray blue white yellow magenta",
       };
     }
 
@@ -56,6 +57,7 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
       artistName: nowPlaying.artistName || "Unknown Artist",
       albumName: nowPlaying.albumName || "Unknown Album",
       timeDisplay: `${currentTime} / ${totalTime}`,
+      colorTest: "red gray blue white yellow magenta",
     };
   }, [nowPlaying]);
 
@@ -72,10 +74,10 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
   const imageWidth = isWide ? playerWidthWide - 4 : artSize - 2;
   const imageHeight = isWide ? artSize - 2 : playerHeightNarrow - 2;
 
-  // Get artwork URL from nowPlaying data, fallback to test image
+  // Get artwork URL from nowPlaying data, no fallback
   const artworkUrl = nowPlaying?.artwork?.url
     ? nowPlaying.artwork.url.replace("{w}", "640").replace("{h}", "640")
-    : "/home/mabylife/Documents/GitHub/apple-music-tui/testArt.png";
+    : null;
 
   if (isWide) {
     // Wide mode: Vertical layout (column)
@@ -97,12 +99,14 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
           flexShrink={0}
           overflow="hidden"
         >
-          <Image
-            src={artworkUrl}
-            protocol="halfBlock"
-            width={imageWidth}
-            height={imageHeight}
-          />
+          {artworkUrl && (
+            <Image
+              src={artworkUrl}
+              protocol="halfBlock"
+              width={imageWidth}
+              height={imageHeight}
+            />
+          )}
         </Box>
 
         {/* Info */}
@@ -115,12 +119,16 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
           flexDirection="column"
           paddingX={1}
         >
-          <Text bold color="#ddd">
+          <Text bold color="white">
             {displayInfo.trackName}
           </Text>
-          <Text color="gray">{displayInfo.artistName}</Text>
-          <Text color="gray">{displayInfo.albumName}</Text>
-          <Text color="#ddd">{displayInfo.timeDisplay}</Text>
+          <Text dimColor color="white">
+            {displayInfo.artistName}
+          </Text>
+          <Text dimColor color="white">
+            {displayInfo.albumName}
+          </Text>
+          <Text color="white">{displayInfo.timeDisplay}</Text>
         </Box>
       </Box>
     );
@@ -144,12 +152,14 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
           flexShrink={0}
           overflow="hidden"
         >
-          <Image
-            src={artworkUrl}
-            protocol="halfBlock"
-            width={imageWidth}
-            height={imageHeight}
-          />
+          {artworkUrl && (
+            <Image
+              src={artworkUrl}
+              protocol="halfBlock"
+              width={imageWidth}
+              height={imageHeight}
+            />
+          )}
         </Box>
 
         {/* Info */}
@@ -163,12 +173,16 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
           marginLeft={1}
           paddingX={1}
         >
-          <Text bold color="#ddd">
+          <Text bold color="white">
             {displayInfo.trackName}
           </Text>
-          <Text color="gray">{displayInfo.artistName}</Text>
-          <Text color="gray">{displayInfo.albumName}</Text>
-          <Text color="#ddd">{displayInfo.timeDisplay}</Text>
+          <Text dimColor color="white">
+            {displayInfo.artistName}
+          </Text>
+          <Text dimColor color="white">
+            {displayInfo.albumName}
+          </Text>
+          <Text color="white">{displayInfo.timeDisplay}</Text>
         </Box>
       </Box>
     );
