@@ -109,10 +109,17 @@ async function search() {
 
 Use Socket.IO Channels to update the info on Player
 
+#### 需要顯示的元素
+
 ```
 Socket.IO Channels
     API:Playback - Live Now Playing Feed (readonly)
 ```
+
+- Track Name
+- Artist Name
+- Album Name
+- Time (SSS/SSS)
 
 ### 需要實現的 Playback 功能
 

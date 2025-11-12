@@ -5,6 +5,7 @@ import { Player } from "./components/Player.js";
 import { CommandBar } from "./components/CommandBar.js";
 import { SearchBar } from "./components/SearchBar.js";
 import { CiderAPI, MusicItem } from "./services/api.js";
+import { PlayerAPI } from "./services/player.js";
 
 interface Item {
   id: string;
@@ -37,6 +38,8 @@ export const App: React.FC = () => {
   const [searchMode, setSearchMode] = useState(false);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [playerUpdateTrigger, setPlayerUpdateTrigger] = useState(0);
 
   // Load recommendations function
   const loadRecommendations = async () => {
@@ -100,6 +103,23 @@ export const App: React.FC = () => {
           // Reload recommendations
           setActiveLayerIndex(0);
           loadRecommendations();
+        } else if (command === "stop") {
+          PlayerAPI.stop().then(() => {
+            setPlayerUpdateTrigger(prev => prev + 1);
+          }).catch((error) => {
+            console.error("Failed to stop:", error);
+          });
+        } else if (command.startsWith("vol ")) {
+          const vol = parseInt(command.substring(4));
+          if (!isNaN(vol) && vol >= 0 && vol <= 100) {
+            PlayerAPI.setVolume(vol / 100).then(() => {
+              setMessage(`Volume ${vol}`);
+              setPlayerUpdateTrigger(prev => prev + 1);
+              setTimeout(() => setMessage(""), 2000);
+            }).catch((error) => {
+              console.error("Failed to set volume:", error);
+            });
+          }
         }
         setCommandMode(false);
         setCommand("");
@@ -158,7 +178,83 @@ export const App: React.FC = () => {
 
     // CRITICAL: Check for special keys BEFORE any other processing
     // This prevents unnecessary re-renders on random input
-    const isSpecialKey = input === ":" || key.tab || key.upArrow || key.downArrow || key.rightArrow || key.leftArrow || key.backspace || key.delete;
+    const isSpecialKey = input === ":" || input === " " || key.tab || key.upArrow || key.downArrow || key.rightArrow || key.leftArrow || key.backspace || key.delete;
+    
+    // Handle global playback controls
+    if (key.ctrl) {
+      if (key.leftArrow) {
+        PlayerAPI.previous().then(() => {
+          setPlayerUpdateTrigger(prev => prev + 1);
+        }).catch((error) => {
+          console.error("Failed to go previous:", error);
+        });
+        return;
+      } else if (key.rightArrow) {
+        PlayerAPI.next().then(() => {
+          setPlayerUpdateTrigger(prev => prev + 1);
+        }).catch((error) => {
+          console.error("Failed to go next:", error);
+        });
+        return;
+      } else if (input === "s" || input === "S" || input === "\x13") {
+        PlayerAPI.toggleShuffle().then(() => {
+          setPlayerUpdateTrigger(prev => prev + 1);
+        }).catch((error) => {
+          console.error("Failed to toggle shuffle:", error);
+        });
+        return;
+      } else if (input === "r" || input === "R" || input === "\x12") {
+        PlayerAPI.toggleRepeat().then(() => {
+          setPlayerUpdateTrigger(prev => prev + 1);
+        }).catch((error) => {
+          console.error("Failed to toggle repeat:", error);
+        });
+        return;
+      } else if (key.upArrow || input === "+") {
+        // Volume up by 5%
+        fetch("http://localhost:10767/api/v1/playback/volume")
+          .then(res => res.json())
+          .then((data: any) => {
+            const currentVol = data.volume || 0;
+            const newVol = Math.min(1, currentVol + 0.05);
+            return PlayerAPI.setVolume(newVol);
+          })
+          .then(() => {
+            setPlayerUpdateTrigger(prev => prev + 1);
+          })
+          .catch((error) => {
+            console.error("Failed to increase volume:", error);
+          });
+        return;
+      } else if (key.downArrow || input === "-") {
+        // Volume down by 5%
+        fetch("http://localhost:10767/api/v1/playback/volume")
+          .then(res => res.json())
+          .then((data: any) => {
+            const currentVol = data.volume || 0;
+            const newVol = Math.max(0, currentVol - 0.05);
+            return PlayerAPI.setVolume(newVol);
+          })
+          .then(() => {
+            setPlayerUpdateTrigger(prev => prev + 1);
+          })
+          .catch((error) => {
+            console.error("Failed to decrease volume:", error);
+          });
+        return;
+      }
+    }
+    
+    // Space for play/pause
+    if (input === " ") {
+      PlayerAPI.playPause().then(() => {
+        setPlayerUpdateTrigger(prev => prev + 1);
+      }).catch((error) => {
+        console.error("Failed to play/pause:", error);
+      });
+      return;
+    }
+    
     if (!isSpecialKey) {
       // Ignore all other input completely
       return;
@@ -352,12 +448,13 @@ export const App: React.FC = () => {
           <Player
             isWide={isWide}
             artSize={isWide ? artSizeWide : artSizeNarrow}
+            updateTrigger={playerUpdateTrigger}
           />
         </Box>
       </Box>
 
       {/* Command Bar */}
-      <CommandBar command={command} isFocused={commandMode} />
+      <CommandBar command={message || command} isFocused={commandMode || message !== ""} />
     </Box>
   );
 };

@@ -1,15 +1,64 @@
-import React from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Box, Text } from "ink";
+import { SocketService, NowPlayingData } from "../services/socket";
 
 interface PlayerProps {
   isWide: boolean;
   artSize: number;
+  updateTrigger?: number;
 }
 
 export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
+  const [nowPlaying, setNowPlaying] = useState<NowPlayingData | null>(null);
+
+  useEffect(() => {
+    SocketService.connect();
+
+    const unsubscribe = SocketService.onPlayback((data) => {
+      setNowPlaying(data);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const formatTime = (millis: number): string => {
+    const seconds = Math.floor(millis / 1000);
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const displayInfo = useMemo(() => {
+    if (!nowPlaying) {
+      return {
+        trackName: "No track playing",
+        artistName: "Unknown Artist",
+        albumName: "Unknown Album",
+        timeDisplay: "0:00 / 0:00",
+      };
+    }
+
+    const currentTimeMs = nowPlaying.currentPlaybackTime
+      ? nowPlaying.currentPlaybackTime * 1000
+      : 0;
+
+    const currentTime = currentTimeMs ? formatTime(currentTimeMs) : "0:00";
+    const totalTime = nowPlaying.durationInMillis
+      ? formatTime(nowPlaying.durationInMillis)
+      : "0:00";
+
+    return {
+      trackName: nowPlaying.name || "No track playing",
+      artistName: nowPlaying.artistName || "Unknown Artist",
+      albumName: nowPlaying.albumName || "Unknown Album",
+      timeDisplay: `${currentTime} / ${totalTime}`,
+    };
+  }, [nowPlaying]);
+
   if (isWide) {
     // Wide mode: Vertical layout (column)
-    // Art on top (visually square), Info below (grows)
     return (
       <Box
         flexDirection="column"
@@ -19,7 +68,7 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
         borderColor="gray"
         paddingX={1}
       >
-        {/* Album Art - Visually square: width 100%, height = artSize */}
+        {/* Album Art */}
         <Box
           width="100%"
           height={artSize}
@@ -29,28 +78,30 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
           flexShrink={0}
           borderColor="gray"
         >
-          {/* nerd font music f001 */}
-          <Text color="gray">󰝚</Text>
+          <Text color="gray">ART</Text>
         </Box>
 
-        {/* Info - Grows */}
+        {/* Info */}
         <Box
           flexGrow={1}
           borderStyle="single"
           borderColor="gray"
-          justifyContent="center"
-          alignItems="center"
+          justifyContent="flex-start"
+          alignItems="flex-start"
           flexDirection="column"
+          paddingX={1}
         >
-          <Text bold>Track Title</Text>
-          <Text color="gray">Artist - Album Name</Text>
-          <Text color="gray">1:29 / 3:12</Text>
+          <Text bold color="#ddd">
+            {displayInfo.trackName}
+          </Text>
+          <Text color="gray">{displayInfo.artistName}</Text>
+          <Text color="gray">{displayInfo.albumName}</Text>
+          <Text color="#ddd">{displayInfo.timeDisplay}</Text>
         </Box>
       </Box>
     );
   } else {
     // Narrow mode: Horizontal layout (row)
-    // Art on left (visually square), Info on right (grows)
     return (
       <Box
         flexDirection="row"
@@ -60,7 +111,7 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
         borderColor="gray"
         paddingX={1}
       >
-        {/* Album Art - Visually square: width = artSize, height 100% */}
+        {/* Album Art */}
         <Box
           width={artSize}
           height="100%"
@@ -70,11 +121,10 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
           flexShrink={0}
           borderColor="gray"
         >
-          {/* nerd font music f001 */}
-          <Text color="gray">󰝚</Text>
+          <Text color="gray">ART</Text>
         </Box>
 
-        {/* Info - Grows */}
+        {/* Info */}
         <Box
           flexGrow={1}
           borderStyle="single"
@@ -83,9 +133,14 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
           alignItems="center"
           flexDirection="column"
           marginLeft={1}
+          paddingX={1}
         >
-          <Text bold>Now Playing</Text>
-          <Text color="gray">Artist - Song Title</Text>
+          <Text bold color="cyan">
+            {displayInfo.trackName}
+          </Text>
+          <Text color="yellow">{displayInfo.artistName}</Text>
+          <Text color="gray">{displayInfo.albumName}</Text>
+          <Text color="green">{displayInfo.timeDisplay}</Text>
         </Box>
       </Box>
     );
