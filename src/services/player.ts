@@ -65,6 +65,10 @@ export class PlayerAPI {
     await this.request("POST", "/api/v1/playback/toggle-repeat");
   }
 
+  static async toggleAutoPlay(): Promise<void> {
+    await this.request("POST", "/api/v1/playback/toggle-autoplay");
+  }
+
   static async seek(position: number): Promise<void> {
     await this.request("POST", "/api/v1/playback/seek", { position });
   }
@@ -81,12 +85,25 @@ export class PlayerAPI {
 
   static async getShuffleMode(): Promise<number> {
     const result = await this.request("GET", "/api/v1/playback/shuffle-mode");
-    return result;
+    return result.value;
   }
 
   static async getRepeatMode(): Promise<number> {
     const result = await this.request("GET", "/api/v1/playback/repeat-mode");
-    return result;
+    return result.value;
+  }
+
+  static async getAutoPlayMode(): Promise<any> {
+    const result = await this.request("GET", "/api/v1/playback/autoplay");
+    console.error(
+      `getAutoPlayMode: result=${JSON.stringify(result)}, result.value=${
+        result.value
+      }, typeof=${typeof result.value}`
+    );
+    const returnValue = result.value;
+    console.error(
+      `getAutoPlayMode: will return ${returnValue}, typeof=${typeof returnValue}`
+    );
+    return returnValue;
   }
 }
-

@@ -232,6 +232,15 @@ export const App: React.FC = () => {
             console.error("Failed to toggle repeat:", error);
           });
         return;
+      } else if (input === "a" || input === "A" || input === "\x01") {
+        PlayerAPI.toggleAutoPlay()
+          .then(() => {
+            setPlayerUpdateTrigger((prev) => prev + 1);
+          })
+          .catch((error) => {
+            console.error("Failed to toggle autoplay:", error);
+          });
+        return;
       } else if (key.upArrow || input === "+") {
         // Volume up by 5%
         fetch("http://localhost:10767/api/v1/playback/volume")
@@ -337,13 +346,19 @@ export const App: React.FC = () => {
             // Must be Top Tracks category
             if (selectedItem.rawData?.isTopTracks) {
               const artistId = selectedItem.rawData.artistId;
-              newItems = await CiderAPI.getArtistTopTracks(artistId, nextLayerIndex);
+              newItems = await CiderAPI.getArtistTopTracks(
+                artistId,
+                nextLayerIndex
+              );
             }
           } else if (itemType === "albums") {
             // Check if it's Albums category
             if (selectedItem.rawData?.isAlbumsCategory) {
               const artistId = selectedItem.rawData.artistId;
-              newItems = await CiderAPI.getArtistAlbums(artistId, nextLayerIndex);
+              newItems = await CiderAPI.getArtistAlbums(
+                artistId,
+                nextLayerIndex
+              );
             } else {
               // Regular album - load tracks
               newItems = await CiderAPI.getAlbumTracks(itemId, nextLayerIndex);

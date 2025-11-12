@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Box, Text, useStdout } from "ink";
 import { SocketService, NowPlayingData } from "../services/socket";
+import { PlayerAPI } from "../services/player";
 import Image from "ink-picture";
 
 interface PlayerProps {
@@ -9,8 +10,15 @@ interface PlayerProps {
   updateTrigger?: number;
 }
 
-export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
+export const Player: React.FC<PlayerProps> = ({
+  isWide,
+  artSize,
+  updateTrigger,
+}) => {
   const [nowPlaying, setNowPlaying] = useState<NowPlayingData | null>(null);
+  const [shuffleMode, setShuffleMode] = useState<number>(0);
+  const [repeatMode, setRepeatMode] = useState<number>(0);
+  const [autoPlayMode, setAutoPlayMode] = useState<boolean>(false);
   const { stdout } = useStdout();
 
   useEffect(() => {
@@ -24,6 +32,32 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    const fetchPlaybackModes = async () => {
+      try {
+        const [shuffle, repeat] = await Promise.all([
+          PlayerAPI.getShuffleMode(),
+          PlayerAPI.getRepeatMode(),
+        ]);
+
+        // Direct fetch for autoplay to avoid type conversion bug in PlayerAPI
+        const autoplayRes = await fetch(
+          "http://localhost:10767/api/v1/playback/autoplay"
+        );
+        const autoplayData = await autoplayRes.json();
+        const autoplay = autoplayData.value;
+
+        setShuffleMode(shuffle);
+        setRepeatMode(repeat);
+        setAutoPlayMode(autoplay);
+      } catch (error) {
+        console.error("Failed to fetch playback modes:", error);
+      }
+    };
+
+    fetchPlaybackModes();
+  }, [updateTrigger]);
 
   const formatTime = (millis: number): string => {
     const seconds = Math.floor(millis / 1000);
@@ -60,6 +94,29 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
       colorTest: "red gray blue white yellow magenta",
     };
   }, [nowPlaying]);
+
+  const getPlaybackModeIcons = () => {
+    const icons = [];
+
+    // Shuffle: 0 = off, 1 = on
+    if (shuffleMode === 1) {
+      icons.push("S");
+    }
+
+    // Repeat: 0 = off, 1 = one, 2 = all
+    if (repeatMode === 1) {
+      icons.push("R1");
+    } else if (repeatMode === 2) {
+      icons.push("RP");
+    }
+
+    // Autoplay: false = off, true = on
+    if (autoPlayMode === true) {
+      icons.push("A");
+    }
+
+    return icons.join(" ");
+  };
 
   // Calculate image dimensions based on terminal and artSize
   // Account for borders (2 chars wide, 2 lines high)
@@ -129,6 +186,7 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
             {displayInfo.albumName}
           </Text>
           <Text color="white">{displayInfo.timeDisplay}</Text>
+          <Text color="cyan">{getPlaybackModeIcons()}</Text>
         </Box>
       </Box>
     );
@@ -183,6 +241,7 @@ export const Player: React.FC<PlayerProps> = ({ isWide, artSize }) => {
             {displayInfo.albumName}
           </Text>
           <Text color="white">{displayInfo.timeDisplay}</Text>
+          <Text color="cyan">{getPlaybackModeIcons()}</Text>
         </Box>
       </Box>
     );

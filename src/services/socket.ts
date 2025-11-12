@@ -79,24 +79,27 @@ export class SocketService {
 
   private static async fetchNowPlaying(): Promise<void> {
     if (this.isFetching) return;
-    
+
     this.isFetching = true;
     try {
-      const response = await fetch(`${CIDER_BASE_URL}/api/v1/playback/now-playing`);
+      const response = await fetch(
+        `${CIDER_BASE_URL}/api/v1/playback/now-playing`
+      );
       if (!response.ok) {
         this.isFetching = false;
         return;
       }
-      
+
       const result = await response.json();
       const info = result.info;
-      
+
       if (info && info.name) {
         // Check if track changed
-        const trackChanged = !this.currentTrackInfo || 
-                           this.currentTrackInfo.name !== info.name ||
-                           this.currentTrackInfo.artistName !== info.artistName;
-        
+        const trackChanged =
+          !this.currentTrackInfo ||
+          this.currentTrackInfo.name !== info.name ||
+          this.currentTrackInfo.artistName !== info.artistName;
+
         this.currentTrackInfo = {
           name: info.name,
           artistName: info.artistName,
@@ -105,7 +108,7 @@ export class SocketService {
           currentPlaybackTime: info.currentPlaybackTime,
           artwork: info.artwork,
         };
-        
+
         // Always notify to keep time updated
         this.notifyListeners();
       }
@@ -118,12 +121,12 @@ export class SocketService {
 
   private static updatePlaybackTime(data: PlaybackTimeData): void {
     const now = Date.now();
-    
+
     // Throttle updates to max once per 100ms to avoid flickering
     if (now - this.lastUpdateTime < 100) {
       return;
     }
-    
+
     if (this.currentTrackInfo) {
       this.currentTrackInfo.currentPlaybackTime = data.currentPlaybackTime;
       this.lastUpdateTime = now;
