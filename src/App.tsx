@@ -48,8 +48,42 @@ export const App: React.FC = () => {
 
   // Use ref for isChangingTrack to avoid stale closures and ensure consistency
   const isChangingTrackRef = useRef(false);
+  const trackChangeDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  
   const setIsChangingTrack = (value: boolean) => {
     isChangingTrackRef.current = value;
+  };
+
+  // Debounced track change handler - ensures only final change within 500ms is executed
+  const requestTrackChange = (trackId: string, trackType: string = "songs") => {
+    // Immediately update UI indicator (zero latency) - this is the source of truth
+    // This makes the cyan item in Layer update instantly
+    setNowPlayingId(trackId);
+    
+    // Clear any pending track change request
+    if (trackChangeDebounceRef.current) {
+      clearTimeout(trackChangeDebounceRef.current);
+      trackChangeDebounceRef.current = null;
+    }
+    
+    // Mark as changing track
+    setIsChangingTrack(true);
+    
+    // Buffer: Wait 500ms to ensure this is the final change
+    // Only the last change within 500ms window will execute play and update Player UI
+    trackChangeDebounceRef.current = setTimeout(() => {
+      // Execute play request for the final track ID
+      CiderAPI.playItem(trackId, trackType).catch(() => {
+        setMessage("Cannot play this track");
+        setTimeout(() => setMessage(""), 2000);
+      });
+      
+      // Reset changing track flag
+      setIsChangingTrack(false);
+      // Trigger player info refresh (art, track info, modes)
+      setPlayerUpdateTrigger((prev) => prev + 1);
+      trackChangeDebounceRef.current = null;
+    }, 500);
   };
 
   // Load recommendations function
@@ -134,13 +168,11 @@ export const App: React.FC = () => {
 
           // Small delay to ensure track fully ended
           trackEndTimeout = setTimeout(async () => {
-            // Double check we're not manually changing track
-            if (isChangingTrackRef.current) {
+            // Don't auto-play if user is manually changing tracks
+            if (trackChangeDebounceRef.current) {
               trackEndTimeout = null;
               return;
             }
-
-            setIsChangingTrack(true);
 
             try {
               const [shuffle, repeat] = await Promise.all([
@@ -154,9 +186,7 @@ export const App: React.FC = () => {
                 QueueService.updateCurrentIndex(nextIndex);
                 const nextTrack = QueueService.getCurrentTrack();
                 if (nextTrack) {
-                  await CiderAPI.playItem(nextTrack.id, "songs");
-                  setNowPlayingId(nextTrack.id);
-                  setPlayerUpdateTrigger((prev) => prev + 1);
+                  requestTrackChange(nextTrack.id, "songs");
                 }
               } else {
                 // Queue ended
@@ -167,7 +197,6 @@ export const App: React.FC = () => {
             } catch (error) {
               console.error("Failed to handle track end:", error);
             } finally {
-              setIsChangingTrack(false);
               trackEndTimeout = null;
             }
           }, 500);
@@ -346,47 +375,23 @@ export const App: React.FC = () => {
     // Handle global playback controls
     if (key.ctrl) {
       if (key.leftArrow) {
-        // Previous using virtual queue - prevent concurrent requests
-        if (isChangingTrackRef.current) {
-          return;
-        }
-
+        // Previous using virtual queue
         const prevIndex = QueueService.getPreviousIndex();
         if (prevIndex === null) {
           return;
         }
 
-        setIsChangingTrack(true);
         QueueService.updateCurrentIndex(prevIndex);
         const track = QueueService.getCurrentTrack();
 
         if (!track) {
-          setIsChangingTrack(false);
           return;
         }
 
-        CiderAPI.playItem(track.id, "songs")
-          .then(() => {
-            setNowPlayingId(track.id);
-            setPlayerUpdateTrigger((prev) => prev + 1);
-          })
-          .catch((error) => {
-            console.error("Failed to play previous:", error);
-            setMessage("Cannot play this track");
-            setTimeout(() => setMessage(""), 2000);
-          })
-          .finally(() => {
-            setIsChangingTrack(false);
-          });
+        requestTrackChange(track.id, "songs");
         return;
       } else if (key.rightArrow) {
-        // Next using virtual queue - prevent concurrent requests
-        if (isChangingTrackRef.current) {
-          return;
-        }
-
-        setIsChangingTrack(true);
-
+        // Next using virtual queue
         Promise.all([PlayerAPI.getShuffleMode(), PlayerAPI.getRepeatMode()])
           .then(([shuffle, repeat]) => {
             const nextIndex = QueueService.getNextIndex(shuffle, repeat);
@@ -401,21 +406,11 @@ export const App: React.FC = () => {
               return null;
             }
 
-            return CiderAPI.playItem(track.id, "songs").then(() => track);
-          })
-          .then((track) => {
-            if (track !== null) {
-              setNowPlayingId(track.id);
-              setPlayerUpdateTrigger((prev) => prev + 1);
-            }
+            requestTrackChange(track.id, "songs");
+            return track;
           })
           .catch((error) => {
-            console.error("Failed to play next:", error);
-            setMessage("Cannot play this track");
-            setTimeout(() => setMessage(""), 2000);
-          })
-          .finally(() => {
-            setIsChangingTrack(false);
+            console.error("Failed to get next track:", error);
           });
         return;
       } else if (input === "s" || input === "S" || input === "\x13") {
@@ -565,54 +560,14 @@ export const App: React.FC = () => {
           QueueService.setSingleTrack(selectedItem);
         }
 
-        // Play the selected track (with safeguard)
-        if (isChangingTrackRef.current) {
-          return;
-        }
-
-        setIsChangingTrack(true);
-        CiderAPI.playItem(itemId, "songs")
-          .then(() => {
-            setNowPlayingId(itemId);
-          })
-          .catch((error) => {
-            console.error("Failed to play song:", error);
-            // Mark this track as unplayable in the current layer
-            setLayers((prev) => {
-              const newLayers = [...prev];
-              if (newLayers[activeLayerIndex]) {
-                newLayers[activeLayerIndex] = {
-                  ...newLayers[activeLayerIndex],
-                  items: newLayers[activeLayerIndex].items.map((item) =>
-                    item.id === itemId ? { ...item, isPlayable: false } : item
-                  ),
-                };
-              }
-              return newLayers;
-            });
-            setMessage("This track is not available for playback");
-            setTimeout(() => setMessage(""), 2000);
-          })
-          .finally(() => {
-            setIsChangingTrack(false);
-          });
+        // Play the selected track
+        requestTrackChange(itemId, "songs");
         return;
       }
 
       // Check if it's a station - play immediately without creating layer
       if (itemType === "stations") {
-        if (isChangingTrackRef.current) {
-          return;
-        }
-
-        setIsChangingTrack(true);
-        CiderAPI.playItem(itemId, "station")
-          .catch((error) => {
-            console.error("Failed to play station:", error);
-          })
-          .finally(() => {
-            setIsChangingTrack(false);
-          });
+        requestTrackChange(itemId, "station");
         return;
       }
 
@@ -815,10 +770,11 @@ export const App: React.FC = () => {
             flexShrink={0}
             overflow="hidden"
           >
-            <Player
+           <Player
               isWide={isWide}
               artSize={isWide ? artSizeWide : artSizeNarrow}
               updateTrigger={playerUpdateTrigger}
+              nowPlayingId={nowPlayingId}
             />
           </Box>
         </Box>

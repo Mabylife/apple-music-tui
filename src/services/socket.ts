@@ -10,6 +10,7 @@ export interface NowPlayingData {
   currentPlaybackTime?: number;
   playbackProgress?: number;
   status?: string;
+  trackId?: string;
   artwork?: {
     url?: string;
     width?: number;
@@ -31,6 +32,8 @@ export class SocketService {
   private static pollInterval: NodeJS.Timeout | null = null;
   private static lastUpdateTime: number = 0;
   private static isFetching: boolean = false;
+  private static fetchAbortController: AbortController | null = null;
+  private static fetchSequence: number = 0; // Track request order
 
   static connect(): void {
     if (this.socket?.connected) return;
@@ -76,34 +79,37 @@ export class SocketService {
   }
 
   private static async fetchNowPlaying(): Promise<void> {
-    if (this.isFetching) return;
-
-    this.isFetching = true;
+    // Cancel any pending fetch
+    if (this.fetchAbortController) {
+      this.fetchAbortController.abort();
+    }
+    
+    // Create new abort controller and increment sequence
+    this.fetchAbortController = new AbortController();
+    const currentSequence = ++this.fetchSequence;
+    
     try {
       const response = await fetch(
-        `${CIDER_BASE_URL}/api/v1/playback/now-playing`
+        `${CIDER_BASE_URL}/api/v1/playback/now-playing`,
+        { signal: this.fetchAbortController.signal }
       );
+      
       if (!response.ok) {
-        this.isFetching = false;
         return;
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as { info: any };
       const info = result.info;
 
-      if (info && info.name) {
-        // Check if track changed
-        const trackChanged =
-          !this.currentTrackInfo ||
-          this.currentTrackInfo.name !== info.name ||
-          this.currentTrackInfo.artistName !== info.artistName;
-
+      // Only update if this is still the latest request
+      if (currentSequence === this.fetchSequence && info && info.name) {
         this.currentTrackInfo = {
           name: info.name,
           artistName: info.artistName,
           albumName: info.albumName,
           durationInMillis: info.durationInMillis,
           currentPlaybackTime: info.currentPlaybackTime,
+          trackId: info.playParams?.id || info.id,
           artwork: info.artwork,
         };
 
@@ -111,9 +117,12 @@ export class SocketService {
         this.notifyListeners();
       }
     } catch (error) {
-      // Silently fail for local fetch errors
+      // Silently fail for aborted requests and fetch errors
+      if ((error as Error).name !== 'AbortError') {
+        // Only log non-abort errors in development
+      }
     } finally {
-      this.isFetching = false;
+      this.fetchAbortController = null;
     }
   }
 

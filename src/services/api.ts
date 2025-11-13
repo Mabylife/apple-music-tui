@@ -11,30 +11,53 @@ export interface MusicItem {
 }
 
 export class CiderAPI {
+  private static activeRequests: Map<string, AbortController> = new Map();
+  
   private static async request(
     method: string,
     endpoint: string,
-    body?: any
+    body?: any,
+    requestKey?: string
   ): Promise<any> {
+    // Cancel any previous request with the same key
+    if (requestKey) {
+      const existingController = this.activeRequests.get(requestKey);
+      if (existingController) {
+        existingController.abort();
+      }
+    }
+    
+    const controller = new AbortController();
+    if (requestKey) {
+      this.activeRequests.set(requestKey, controller);
+    }
+    
     const url = `${CIDER_BASE_URL}${endpoint}`;
     const options: RequestInit = {
       method,
       headers: {
         "Content-Type": "application/json",
       },
+      signal: controller.signal,
     };
 
     if (body) {
       options.body = JSON.stringify(body);
     }
 
-    const response = await fetch(url, options);
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.statusText}`);
-    }
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.statusText}`);
+      }
 
-    const text = await response.text();
-    return text ? JSON.parse(text) : {};
+      const text = await response.text();
+      return text ? JSON.parse(text) : {};
+    } finally {
+      if (requestKey) {
+        this.activeRequests.delete(requestKey);
+      }
+    }
   }
 
   static async getRecommendations(limit: number = 10, layerIndex: number = 0): Promise<MusicItem[]> {
@@ -179,10 +202,27 @@ export class CiderAPI {
   }
 
   static async playItem(id: string, type: string): Promise<void> {
+    // Use 'play-item' as request key to cancel any pending play requests
     await this.request("POST", "/api/v1/playback/play-item", {
       id: id.toString(),
       type,
-    });
+    }, 'play-item');
+  }
+
+  static async getTrackInfo(trackId: string): Promise<MusicItem | null> {
+    try {
+      const result = await this.request("POST", "/api/v1/amapi/run-v3", {
+        path: `/v1/catalog/${STOREFRONT}/songs/${trackId}`,
+      }, `track-info-${trackId}`);
+
+      const track = result?.data?.data?.[0];
+      if (!track) return null;
+
+      return this.parseItem(track, 0);
+    } catch (error) {
+      // Silently fail - avoid log spam in TUI
+      return null;
+    }
   }
 
   private static parseItem(item: any, layerIndex?: number): MusicItem {

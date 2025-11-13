@@ -2,36 +2,74 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Box, Text, useStdout } from "ink";
 import { SocketService, NowPlayingData } from "../services/socket";
 import { PlayerAPI } from "../services/player";
+import { CiderAPI, MusicItem } from "../services/api";
 import Image from "ink-picture";
 
 interface PlayerProps {
   isWide: boolean;
   artSize: number;
   updateTrigger?: number;
+  nowPlayingId?: string | null;
 }
 
 export const Player: React.FC<PlayerProps> = ({
   isWide,
   artSize,
   updateTrigger,
+  nowPlayingId,
 }) => {
-  const [nowPlaying, setNowPlaying] = useState<NowPlayingData | null>(null);
+  const [trackInfo, setTrackInfo] = useState<MusicItem | null>(null);
+  const [playbackState, setPlaybackState] = useState<NowPlayingData | null>(null);
   const [shuffleMode, setShuffleMode] = useState<number>(0);
   const [repeatMode, setRepeatMode] = useState<number>(0);
   const [autoPlayMode, setAutoPlayMode] = useState<boolean>(false);
   const { stdout } = useStdout();
 
+  // Fetch track info when nowPlayingId changes (local state is source of truth)
+  // Debounced to avoid excessive API calls during rapid track switching
+  useEffect(() => {
+    if (!nowPlayingId) {
+      setTrackInfo(null);
+      return;
+    }
+
+    let cancelled = false;
+    
+    // Debounce: wait 500ms before fetching track info
+    // This ensures only the final track in a rapid sequence gets fetched
+    const timeoutId = setTimeout(() => {
+      CiderAPI.getTrackInfo(nowPlayingId)
+        .then((info) => {
+          if (!cancelled && info) {
+            setTrackInfo(info);
+          }
+        })
+        .catch(() => {
+          // Silently fail - avoid log spam in TUI
+        });
+    }, 500);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [nowPlayingId]);
+
+  // Listen to socket for playback time and verification only
   useEffect(() => {
     SocketService.connect();
 
     const unsubscribe = SocketService.onPlayback((data) => {
-      setNowPlaying(data);
+      setPlaybackState(data);
+      
+      // Optional verification: socket track ID can differ temporarily during track changes
+      // This is expected behavior and not an error
     });
 
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [nowPlayingId]);
 
   useEffect(() => {
     const fetchPlaybackModes = async () => {
@@ -45,7 +83,7 @@ export const Player: React.FC<PlayerProps> = ({
         const autoplayRes = await fetch(
           "http://localhost:10767/api/v1/playback/autoplay"
         );
-        const autoplayData = await autoplayRes.json();
+        const autoplayData = (await autoplayRes.json()) as { value: boolean };
         const autoplay = autoplayData.value;
 
         setShuffleMode(shuffle);
@@ -67,33 +105,44 @@ export const Player: React.FC<PlayerProps> = ({
   };
 
   const displayInfo = useMemo(() => {
-    if (!nowPlaying) {
+    // Use local track info as primary source
+    if (!trackInfo) {
       return {
         trackName: "No track playing",
         artistName: "Unknown Artist",
         albumName: "Unknown Album",
         timeDisplay: "0:00 / 0:00",
-        colorTest: "red gray blue white yellow magenta",
+        artworkUrl: null,
       };
     }
 
-    const currentTimeMs = nowPlaying.currentPlaybackTime
-      ? nowPlaying.currentPlaybackTime * 1000
+    // Get time from socket playback state
+    const currentTimeMs = playbackState?.currentPlaybackTime
+      ? playbackState.currentPlaybackTime * 1000
       : 0;
 
     const currentTime = currentTimeMs ? formatTime(currentTimeMs) : "0:00";
-    const totalTime = nowPlaying.durationInMillis
-      ? formatTime(nowPlaying.durationInMillis)
-      : "0:00";
+    
+    // Duration from socket if available, otherwise from track info
+    const durationMs = playbackState?.durationInMillis || 0;
+    const totalTime = durationMs ? formatTime(durationMs) : "0:00";
+
+    // Extract track info from local data
+    const trackName = trackInfo.rawData?.attributes?.name || trackInfo.label;
+    const artistName = trackInfo.rawData?.attributes?.artistName || "Unknown Artist";
+    const albumName = trackInfo.rawData?.attributes?.albumName || "Unknown Album";
+    const artworkUrl = trackInfo.rawData?.attributes?.artwork?.url
+      ? trackInfo.rawData.attributes.artwork.url.replace("{w}", "640").replace("{h}", "640")
+      : null;
 
     return {
-      trackName: nowPlaying.name || "No track playing",
-      artistName: nowPlaying.artistName || "Unknown Artist",
-      albumName: nowPlaying.albumName || "Unknown Album",
+      trackName,
+      artistName,
+      albumName,
       timeDisplay: `${currentTime} / ${totalTime}`,
-      colorTest: "red gray blue white yellow magenta",
+      artworkUrl,
     };
-  }, [nowPlaying]);
+  }, [trackInfo, playbackState]);
 
   const getPlaybackModeIcons = () => {
     const icons = [];
@@ -131,10 +180,8 @@ export const Player: React.FC<PlayerProps> = ({
   const imageWidth = isWide ? playerWidthWide - 4 : artSize - 2;
   const imageHeight = isWide ? artSize - 2 : playerHeightNarrow - 2;
 
-  // Get artwork URL from nowPlaying data, no fallback
-  const artworkUrl = nowPlaying?.artwork?.url
-    ? nowPlaying.artwork.url.replace("{w}", "640").replace("{h}", "640")
-    : null;
+  // Get artwork URL from local track info
+  const artworkUrl = displayInfo.artworkUrl;
 
   if (isWide) {
     // Wide mode: Vertical layout (column)

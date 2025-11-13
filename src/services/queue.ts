@@ -45,6 +45,18 @@ export class QueueService {
     };
   }
 
+  // Verify if a track ID matches the current track in queue
+  static isCurrentTrack(trackId: string): boolean {
+    const currentTrack = this.getCurrentTrack();
+    return currentTrack?.id === trackId;
+  }
+
+  // Get current track ID (for verification)
+  static getCurrentTrackId(): string | null {
+    const currentTrack = this.getCurrentTrack();
+    return currentTrack?.id || null;
+  }
+
   static getNextIndex(shuffle: number, repeat: number): number | null {
     // Safety check: ensure queue exists
     if (!this.queue || !this.queue.tracks) {
