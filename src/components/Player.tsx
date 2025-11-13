@@ -11,6 +11,7 @@ interface PlayerProps {
   artSize: number;
   updateTrigger?: number;
   nowPlayingId?: string | null;
+  isPlayingStation?: boolean;
 }
 
 export const Player: React.FC<PlayerProps> = ({
@@ -18,6 +19,7 @@ export const Player: React.FC<PlayerProps> = ({
   artSize,
   updateTrigger,
   nowPlayingId,
+  isPlayingStation = false,
 }) => {
   const [trackInfo, setTrackInfo] = useState<MusicItem | null>(null);
   const [playbackState, setPlaybackState] = useState<NowPlayingData | null>(
@@ -183,6 +185,11 @@ export const Player: React.FC<PlayerProps> = ({
   }, [trackInfo, playbackState]);
 
   const getPlaybackModeIcons = () => {
+    // Don't show playback modes when playing Station
+    if (isPlayingStation) {
+      return "";
+    }
+    
     const icons = [];
 
     // Shuffle: 0 = off, 1 = on

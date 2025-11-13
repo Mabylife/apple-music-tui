@@ -118,18 +118,21 @@ Request Body (`application/json`)
 經研究 Apple Music API 文檔，確認 station 的曲目是動態生成的，API 無法直接查詢 station 當前播放的曲目。
 
 **解決方案：**
+
 - TUI 接管邏輯，監聽 Cider socket 的 now-playing 事件
 - 當偵測到 socket 回傳的 trackId 與當前 nowPlayingId 不同時（**僅限 station 模式**）
 - 自動同步更新 nowPlayingId 為實際播放的 track ID
 - 這樣 Player 組件就能正確顯示 station 播放的曲目資訊
 
 **Station 特殊處理：**
+
 1. **播放控制**：播放 station 時不設定 nowPlayingId，等待 socket 同步
 2. **上下首切換**：Station 模式下，Ctrl+左/右箭頭直接調用 Cider 的 previous/next API，而非使用虛擬佇列
 3. **自動播放下一首**：Station 模式下跳過 TUI 的自動播放邏輯，由 Cider 自動處理電台播放清單
 4. **狀態隔離**：使用 `isPlayingStation` 標記確保特殊邏輯只影響 station，不影響普通曲目
 
-**實作位置：** 
+**實作位置：**
+
 - `App.tsx` 的 socket playback 監聽器中加入同步邏輯
 - `App.tsx` 的鍵盤控制中加入 station 特殊分支處理
 
@@ -141,26 +144,13 @@ Request Body (`application/json`)
 1. **Player - info 不顯示**：播放電台時，Player 組件不顯示當前播放的歌曲資訊（歌名、藝人、專輯封面等）
 2. **Layer highlighted item 不顯示**：Layer 中不會顯示當前正在播放的曲目（cyan 高亮）
 
-**問題分析：**
-- Station 播放時，`nowPlayingId` 初始為 `null`（等待 socket 同步）
-- Socket 同步條件太嚴格：`!isChangingTrackRef.current && !trackChangeDebounceRef.current`
-- 當播放 station 時，debounce 機制會阻止 socket 同步 trackId
-- 結果：500ms timeout 執行完後，socket 的同步邏輯已經錯過，導致 UI 不更新
+#### 解決方案：
 
-**嘗試修復：**
-根據 [7] 的教訓，要確保狀態同步的即時性。對於 station：
-- 移除同步條件的限制
-- Station 模式下，只要 socket 回傳 `data.trackId`，就立即同步到 `nowPlayingId`
-- 因為有 `isPlayingStation` 標記隔離，不會影響普通曲目的播放邏輯
+應該要重新審視 Station 的播放邏輯，其實沒那麼難，我整理一下：
 
-**修復位置：** `App.tsx` 的 socket playback 監聽器，簡化 station 的同步條件
-
-**狀態：未解決**
-- 2025-11-13：修改同步條件後，仍然無法顯示 cyan [item] 和 Player info
-- 需要進一步 debug：
-  1. 確認 socket 是否真的回傳了 `data.trackId`
-  2. 確認 `isPlayingStation` 狀態是否正確
-  3. 確認 `setNowPlayingId(data.trackId)` 是否真的被執行
-  4. 確認 `nowPlayingId` 狀態是否真的更新了
-  5. 檢查 Player 和 Layer 組件接收到的 props
-  6. 可能需要加入 console.log 或 debug 輸出來追蹤狀態變化
+1. 當播放 Station 時， 使用 Station 特別的處理邏輯，與一般曲目播放邏輯隔離開來
+2. 當播放 Station, 先發出播放請求給 Cider, 並且記錄下來目前正在播放的 station id
+3. 與一般播放邏輯一樣，不論是首次開始播放 Station 或是上一首/下一首 都應該要馬上更新本地的 nowPlayingId -> 更新 Cyan 高亮，特別的是，因為 Station 的播放清單(QUEUE system)是 Cider 負責，因此不需要像一般邏輯一樣等待確定是最後一項更新後才向 Cider 送出請求，而是直接向 Cider 送出上一首/下一首的請求（五秒最多一次）
+4. **確定這是前後 0.5 秒內的唯一一次播放/上一首/下一首**
+   - 才向 Cider 拿取目前 Track 的 ID
+   - 使用拿到的 ID 去更新 UI
