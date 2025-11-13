@@ -18,7 +18,7 @@ interface LayerProps {
   nowPlayingId?: string | null;
 }
 
-export const Layer: React.FC<LayerProps> = ({
+export const Layer: React.FC<LayerProps> = React.memo(({
   items,
   selectedIndex,
   isActive,
@@ -31,6 +31,7 @@ export const Layer: React.FC<LayerProps> = ({
   // Calculate visible items based on height
   // Each item takes 1 line, account for borders (2 lines) and padding
   const maxVisibleItems = Math.max(1, height - 2);
+  const maxTextWidth = width - 4; // Account for borders and padding
 
   // Calculate scroll offset to keep selected item visible
   const scrollOffset = useMemo(() => {
@@ -49,10 +50,17 @@ export const Layer: React.FC<LayerProps> = ({
     return offset;
   }, [selectedIndex, items.length, maxVisibleItems]);
 
-  const visibleItems = items.slice(
-    scrollOffset,
-    scrollOffset + maxVisibleItems
+  const visibleItems = useMemo(() => 
+    items.slice(scrollOffset, scrollOffset + maxVisibleItems),
+    [items, scrollOffset, maxVisibleItems]
   );
+
+  // Memoize truncation helper
+  const truncateLabel = useMemo(() => (label: string) => {
+    return label.length > maxTextWidth
+      ? label.slice(0, maxTextWidth - 3) + "..."
+      : label;
+  }, [maxTextWidth]);
 
   return (
     <Box
@@ -91,11 +99,7 @@ export const Layer: React.FC<LayerProps> = ({
                 const label = item?.label || "";
                 const itemId = item?.id || "";
                 const isPlayable = item?.isPlayable !== false;
-                const maxTextWidth = width - 4; // Account for borders and padding
-                const truncatedLabel =
-                  label.length > maxTextWidth
-                    ? label.slice(0, maxTextWidth - 3) + "..."
-                    : label;
+                const truncatedLabel = truncateLabel(label);
                 const isNowPlaying = nowPlayingId && itemId === nowPlayingId;
 
                 let textColor = "gray";
@@ -117,11 +121,7 @@ export const Layer: React.FC<LayerProps> = ({
           // When open, show all visible items with truncation
           visibleItems.map((item, index) => {
             const actualIndex = scrollOffset + index;
-            const maxTextWidth = width - 4; // Account for borders and padding
-            const truncatedLabel =
-              item.label.length > maxTextWidth
-                ? item.label.slice(0, maxTextWidth - 3) + "..."
-                : item.label;
+            const truncatedLabel = truncateLabel(item.label);
 
             const isPlayable = item.isPlayable !== false;
             const isNowPlaying = nowPlayingId && item.id === nowPlayingId;
@@ -148,6 +148,6 @@ export const Layer: React.FC<LayerProps> = ({
       </Box>
     </Box>
   );
-};
+});
 
 Layer.displayName = "Layer";

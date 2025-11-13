@@ -686,33 +686,30 @@ export const App: React.FC = () => {
       }
     } else if (key.upArrow) {
       // Move selection up
-      const currentLayer = layers[activeLayerIndex];
-      if (currentLayer && currentLayer.selectedIndex > 0) {
-        setLayers((prev) => {
-          const newLayers = [...prev];
-          newLayers[activeLayerIndex] = {
-            ...currentLayer,
-            selectedIndex: currentLayer.selectedIndex - 1,
-          };
-          return newLayers;
-        });
-      }
+      setLayers((prev) => {
+        const currentLayer = prev[activeLayerIndex];
+        if (!currentLayer || currentLayer.selectedIndex <= 0) return prev;
+        
+        const newLayers = [...prev];
+        newLayers[activeLayerIndex] = {
+          ...currentLayer,
+          selectedIndex: currentLayer.selectedIndex - 1,
+        };
+        return newLayers;
+      });
     } else if (key.downArrow) {
       // Move selection down
-      const currentLayer = layers[activeLayerIndex];
-      if (
-        currentLayer &&
-        currentLayer.selectedIndex < currentLayer.items.length - 1
-      ) {
-        setLayers((prev) => {
-          const newLayers = [...prev];
-          newLayers[activeLayerIndex] = {
-            ...currentLayer,
-            selectedIndex: currentLayer.selectedIndex + 1,
-          };
-          return newLayers;
-        });
-      }
+      setLayers((prev) => {
+        const currentLayer = prev[activeLayerIndex];
+        if (!currentLayer || currentLayer.selectedIndex >= currentLayer.items.length - 1) return prev;
+        
+        const newLayers = [...prev];
+        newLayers[activeLayerIndex] = {
+          ...currentLayer,
+          selectedIndex: currentLayer.selectedIndex + 1,
+        };
+        return newLayers;
+      });
     }
   });
 
