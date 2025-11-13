@@ -67,11 +67,11 @@ The Art image issue while switching tracks may be related to the fetching method
 
 我們把 Track id 放在本地就是為了要確保這個一致性，讓使用者的操作可以被正確且瞬間的反映在 UI 上
 
-[a] fixed
+[7-a] fixed
 
 Buffer 實作存在問題，需求是 "在 0.5 秒內的唯一一次儲存"，才會去執行播放跟 UI 更新，但目前儘管是直接按住切換按鍵，連續頻繁的操作，仍然會導致多次的播放請求跟 UI 更新，而不是在最後一次操作後的 0.5 秒才執行
 
-[b] fixed by giving a version to every fetched image, also with some buffer time and the trashing fetches that are too old
+[7-b] fixed by giving a version to every fetched image, also with some buffer time and the trashing fetches that are too old
 
 目前對於專輯封面的顯示似乎不夠積極，我認為我們需要更積極的去管理跟清理所有的進行中 Fetch 動作，而不是去依賴回傳或讀取的完成順序。
 
@@ -136,7 +136,7 @@ Request Body (`application/json`)
 - `App.tsx` 的 socket playback 監聽器中加入同步邏輯
 - `App.tsx` 的鍵盤控制中加入 station 特殊分支處理
 
-### [a] Station UI 顯示問題
+[8-a] fixed
 
 **問題描述：**
 邏輯已經完全隔離，能夠透過 Cider API 正常播放跟切換電台歌曲，但 UI 存在以下問題：
@@ -144,13 +144,4 @@ Request Body (`application/json`)
 1. **Player - info 不顯示**：播放電台時，Player 組件不顯示當前播放的歌曲資訊（歌名、藝人、專輯封面等）
 2. **Layer highlighted item 不顯示**：Layer 中不會顯示當前正在播放的曲目（cyan 高亮）
 
-#### 解決方案：
-
-應該要重新審視 Station 的播放邏輯，其實沒那麼難，我整理一下：
-
-1. 當播放 Station 時， 使用 Station 特別的處理邏輯，與一般曲目播放邏輯隔離開來
-2. 當播放 Station, 先發出播放請求給 Cider, 並且記錄下來目前正在播放的 station id
-3. 與一般播放邏輯一樣，不論是首次開始播放 Station 或是上一首/下一首 都應該要馬上更新本地的 nowPlayingId -> 更新 Cyan 高亮，特別的是，因為 Station 的播放清單(QUEUE system)是 Cider 負責，因此不需要像一般邏輯一樣等待確定是最後一項更新後才向 Cider 送出請求，而是直接向 Cider 送出上一首/下一首的請求（五秒最多一次）
-4. **確定這是前後 0.5 秒內的唯一一次播放/上一首/下一首**
-   - 才向 Cider 拿取目前 Track 的 ID
-   - 使用拿到的 ID 去更新 UI
+詳細解決方法請見 markdowns/STATION.md
