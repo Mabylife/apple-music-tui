@@ -73,9 +73,8 @@ export class CiderAPI {
       const contents = rec.relationships?.contents?.data || [];
       for (const item of contents.slice(0, 10)) {
         const parsed = this.parseItem(item, layerIndex);
-        // Filter out stations - they cause rendering issues
-        // Also filter out duplicates
-        if (parsed.type !== "stations" && !seenIds.has(parsed.id)) {
+        // Filter out duplicates
+        if (!seenIds.has(parsed.id)) {
           seenIds.add(parsed.id);
           items.push(parsed);
         }

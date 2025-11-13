@@ -40,7 +40,7 @@ There is an `setMessage` method in `App.tsx`, we should use that to display ness
 
 For layer, there is a `loadingMessage` prop we can use to display loading messages.
 
-## [7] Error handling track switching when rapidly switching tracks and R1/R/S/A modes (QUEUE management)
+## [x] Error handling track switching when rapidly switching tracks and R1/R/S/A modes (QUEUE management)
 
 When rapidly switching tracks and R1/R/S/A modes, issues may occur like:
 
@@ -74,3 +74,93 @@ Buffer 實作存在問題，需求是 "在 0.5 秒內的唯一一次儲存"，�
 [b] fixed by giving a version to every fetched image, also with some buffer time and the trashing fetches that are too old
 
 目前對於專輯封面的顯示似乎不夠積極，我認為我們需要更積極的去管理跟清理所有的進行中 Fetch 動作，而不是去依賴回傳或讀取的完成順序。
+
+[8] Station
+
+我們之前實在是沒辦法開啟一個 Station，所以暫時把他 Filter 隱藏起來了。
+
+apple music api 的 回傳片段
+
+```json
+    "data": [
+        {
+            "id": "ra.1498157166",
+            "type": "stations",
+```
+
+Cider RPC 的播放 API 說明
+
+```md
+POST /play-item
+
+Triggers playback of an item.
+
+Accepts a type of item to play and an id for the item. type should be one of the accepted types in the Apple Music API, such as songs. Note that the ID is required to be a string, not a number.
+Request Body (`application/json`)
+
+200: OK
+```
+
+### 修復步驟：
+
+1. 先把 Filter 移除
+2. 確認 Layer 已經有設置給 [Station] 的 NerdFont 跟樣式
+3. 嘗試傳送正確的 type 跟 id 到 Cider RPC 的播放 API
+
+### 發現：
+
+1. 已經可以成功播放，但是由於 TUI 的 Fetch 結構，播放電台後並不會顯示 Player - info。
+
+2. 開始播放電台之後，Cider 能夠拿到下一首歌的資訊
+
+### 修復完成：
+
+經研究 Apple Music API 文檔，確認 station 的曲目是動態生成的，API 無法直接查詢 station 當前播放的曲目。
+
+**解決方案：**
+- TUI 接管邏輯，監聽 Cider socket 的 now-playing 事件
+- 當偵測到 socket 回傳的 trackId 與當前 nowPlayingId 不同時（**僅限 station 模式**）
+- 自動同步更新 nowPlayingId 為實際播放的 track ID
+- 這樣 Player 組件就能正確顯示 station 播放的曲目資訊
+
+**Station 特殊處理：**
+1. **播放控制**：播放 station 時不設定 nowPlayingId，等待 socket 同步
+2. **上下首切換**：Station 模式下，Ctrl+左/右箭頭直接調用 Cider 的 previous/next API，而非使用虛擬佇列
+3. **自動播放下一首**：Station 模式下跳過 TUI 的自動播放邏輯，由 Cider 自動處理電台播放清單
+4. **狀態隔離**：使用 `isPlayingStation` 標記確保特殊邏輯只影響 station，不影響普通曲目
+
+**實作位置：** 
+- `App.tsx` 的 socket playback 監聽器中加入同步邏輯
+- `App.tsx` 的鍵盤控制中加入 station 特殊分支處理
+
+### [a] Station UI 顯示問題
+
+**問題描述：**
+邏輯已經完全隔離，能夠透過 Cider API 正常播放跟切換電台歌曲，但 UI 存在以下問題：
+
+1. **Player - info 不顯示**：播放電台時，Player 組件不顯示當前播放的歌曲資訊（歌名、藝人、專輯封面等）
+2. **Layer highlighted item 不顯示**：Layer 中不會顯示當前正在播放的曲目（cyan 高亮）
+
+**問題分析：**
+- Station 播放時，`nowPlayingId` 初始為 `null`（等待 socket 同步）
+- Socket 同步條件太嚴格：`!isChangingTrackRef.current && !trackChangeDebounceRef.current`
+- 當播放 station 時，debounce 機制會阻止 socket 同步 trackId
+- 結果：500ms timeout 執行完後，socket 的同步邏輯已經錯過，導致 UI 不更新
+
+**嘗試修復：**
+根據 [7] 的教訓，要確保狀態同步的即時性。對於 station：
+- 移除同步條件的限制
+- Station 模式下，只要 socket 回傳 `data.trackId`，就立即同步到 `nowPlayingId`
+- 因為有 `isPlayingStation` 標記隔離，不會影響普通曲目的播放邏輯
+
+**修復位置：** `App.tsx` 的 socket playback 監聽器，簡化 station 的同步條件
+
+**狀態：未解決**
+- 2025-11-13：修改同步條件後，仍然無法顯示 cyan [item] 和 Player info
+- 需要進一步 debug：
+  1. 確認 socket 是否真的回傳了 `data.trackId`
+  2. 確認 `isPlayingStation` 狀態是否正確
+  3. 確認 `setNowPlayingId(data.trackId)` 是否真的被執行
+  4. 確認 `nowPlayingId` 狀態是否真的更新了
+  5. 檢查 Player 和 Layer 組件接收到的 props
+  6. 可能需要加入 console.log 或 debug 輸出來追蹤狀態變化

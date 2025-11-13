@@ -46,6 +46,7 @@ export const App: React.FC = () => {
   const [message, setMessage] = useState("");
   const [playerUpdateTrigger, setPlayerUpdateTrigger] = useState(0);
   const [nowPlayingId, setNowPlayingId] = useState<string | null>(null);
+  const [isPlayingStation, setIsPlayingStation] = useState(false);
 
   // Use ref for isChangingTrack to avoid stale closures and ensure consistency
   const isChangingTrackRef = useRef(false);
@@ -57,9 +58,15 @@ export const App: React.FC = () => {
 
   // Debounced track change handler - ensures only final change within 500ms is executed
   const requestTrackChange = (trackId: string, trackType: string = "songs") => {
-    // Immediately update UI indicator (zero latency) - this is the source of truth
-    // This makes the cyan item in Layer update instantly
-    setNowPlayingId(trackId);
+    // Track if we're starting to play a station
+    const isStation = trackType === "stations";
+    setIsPlayingStation(isStation);
+    
+    // For stations, don't set nowPlayingId yet - will be synced from socket
+    // For regular tracks, immediately update UI indicator
+    if (!isStation) {
+      setNowPlayingId(trackId);
+    }
     
     // Clear any pending track change request
     if (trackChangeDebounceRef.current) {
@@ -159,8 +166,19 @@ export const App: React.FC = () => {
       const duration = data.durationInMillis || 0;
       const progress = duration > 0 ? currentTime / duration : 0;
 
+      // Sync nowPlayingId with actual playing track from Cider
+      // ONLY for stations - where Cider knows the actual track but we only have station ID
+      if (isPlayingStation && data.trackId) {
+        // Always sync for stations - even during track changes
+        // This ensures we immediately show the track info when station starts playing
+        if (data.trackId !== nowPlayingId) {
+          setNowPlayingId(data.trackId);
+        }
+      }
+
       // Detect track ended (progress >= 99% or reached the end)
-      if (progress >= 0.99 && duration > 0) {
+      // Skip auto-play for stations - Cider handles station playlist automatically
+      if (!isPlayingStation && progress >= 0.99 && duration > 0) {
         // Check if this is a new track end event and not already changing track manually
         if (
           !isChangingTrackRef.current &&
@@ -383,7 +401,15 @@ export const App: React.FC = () => {
     // Handle global playback controls
     if (key.ctrl) {
       if (key.leftArrow) {
-        // Previous using virtual queue
+        // Station: use Cider's previous API directly
+        if (isPlayingStation) {
+          PlayerAPI.previous().catch((error) => {
+            console.error("Failed to go to previous track:", error);
+          });
+          return;
+        }
+        
+        // Regular tracks: use virtual queue
         const prevIndex = QueueService.getPreviousIndex();
         if (prevIndex === null) {
           return;
@@ -399,7 +425,15 @@ export const App: React.FC = () => {
         requestTrackChange(track.id, "songs");
         return;
       } else if (key.rightArrow) {
-        // Next using virtual queue
+        // Station: use Cider's next API directly
+        if (isPlayingStation) {
+          PlayerAPI.next().catch((error) => {
+            console.error("Failed to go to next track:", error);
+          });
+          return;
+        }
+        
+        // Regular tracks: use virtual queue
         Promise.all([PlayerAPI.getShuffleMode(), PlayerAPI.getRepeatMode()])
           .then(([shuffle, repeat]) => {
             const nextIndex = QueueService.getNextIndex(shuffle, repeat);
@@ -575,7 +609,7 @@ export const App: React.FC = () => {
 
       // Check if it's a station - play immediately without creating layer
       if (itemType === "stations") {
-        requestTrackChange(itemId, "station");
+        requestTrackChange(itemId, "stations");
         return;
       }
 
