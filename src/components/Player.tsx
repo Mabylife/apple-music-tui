@@ -23,6 +23,8 @@ export const Player: React.FC<PlayerProps> = ({
   const [shuffleMode, setShuffleMode] = useState<number>(0);
   const [repeatMode, setRepeatMode] = useState<number>(0);
   const [autoPlayMode, setAutoPlayMode] = useState<boolean>(false);
+  const [confirmedArtworkUrl, setConfirmedArtworkUrl] = useState<string | null>(null);
+  const [artworkVersion, setArtworkVersion] = useState<number>(0);
   const { stdout } = useStdout();
 
   // Fetch track info when nowPlayingId changes (local state is source of truth)
@@ -30,22 +32,46 @@ export const Player: React.FC<PlayerProps> = ({
   useEffect(() => {
     if (!nowPlayingId) {
       setTrackInfo(null);
+      setConfirmedArtworkUrl(null);
+      setArtworkVersion((prev) => prev + 1);
       return;
     }
 
     let cancelled = false;
+    const requestedTrackId = nowPlayingId;
+    const requestVersion = artworkVersion + 1;
+    
+    // Clear artwork immediately to prevent old image showing
+    setConfirmedArtworkUrl(null);
+    setArtworkVersion(requestVersion);
     
     // Debounce: wait 500ms before fetching track info
     // This ensures only the final track in a rapid sequence gets fetched
     const timeoutId = setTimeout(() => {
-      CiderAPI.getTrackInfo(nowPlayingId)
+      CiderAPI.getTrackInfo(requestedTrackId)
         .then((info) => {
-          if (!cancelled && info) {
+          // Double-check: only update if not cancelled AND track ID still matches
+          // This prevents race conditions where a slow old request completes after a newer one
+          if (!cancelled && info && info.id === requestedTrackId) {
             setTrackInfo(info);
+            
+            // Extract and confirm artwork URL with version check
+            const artworkUrl = info.rawData?.attributes?.artwork?.url
+              ? info.rawData.attributes.artwork.url.replace("{w}", "640").replace("{h}", "640")
+              : null;
+            
+            // Only update artwork if this request's version matches current version
+            setArtworkVersion((currentVersion) => {
+              if (currentVersion === requestVersion && artworkUrl) {
+                setConfirmedArtworkUrl(artworkUrl);
+              }
+              return currentVersion;
+            });
           }
         })
         .catch(() => {
           // Silently fail - avoid log spam in TUI
+          // This includes AbortError when request is cancelled by API layer
         });
     }, 500);
 
@@ -112,7 +138,6 @@ export const Player: React.FC<PlayerProps> = ({
         artistName: "Unknown Artist",
         albumName: "Unknown Album",
         timeDisplay: "0:00 / 0:00",
-        artworkUrl: null,
       };
     }
 
@@ -131,16 +156,12 @@ export const Player: React.FC<PlayerProps> = ({
     const trackName = trackInfo.rawData?.attributes?.name || trackInfo.label;
     const artistName = trackInfo.rawData?.attributes?.artistName || "Unknown Artist";
     const albumName = trackInfo.rawData?.attributes?.albumName || "Unknown Album";
-    const artworkUrl = trackInfo.rawData?.attributes?.artwork?.url
-      ? trackInfo.rawData.attributes.artwork.url.replace("{w}", "640").replace("{h}", "640")
-      : null;
 
     return {
       trackName,
       artistName,
       albumName,
       timeDisplay: `${currentTime} / ${totalTime}`,
-      artworkUrl,
     };
   }, [trackInfo, playbackState]);
 
@@ -180,9 +201,6 @@ export const Player: React.FC<PlayerProps> = ({
   const imageWidth = isWide ? playerWidthWide - 4 : artSize - 2;
   const imageHeight = isWide ? artSize - 2 : playerHeightNarrow - 2;
 
-  // Get artwork URL from local track info
-  const artworkUrl = displayInfo.artworkUrl;
-
   if (isWide) {
     // Wide mode: Vertical layout (column)
     return (
@@ -203,9 +221,10 @@ export const Player: React.FC<PlayerProps> = ({
           flexShrink={0}
           overflow="hidden"
         >
-          {artworkUrl && (
+          {confirmedArtworkUrl && (
             <Image
-              src={artworkUrl}
+              key={`${confirmedArtworkUrl}-${artworkVersion}`}
+              src={confirmedArtworkUrl}
               protocol="halfBlock"
               width={imageWidth}
               height={imageHeight}
@@ -257,9 +276,10 @@ export const Player: React.FC<PlayerProps> = ({
           flexShrink={0}
           overflow="hidden"
         >
-          {artworkUrl && (
+          {confirmedArtworkUrl && (
             <Image
-              src={artworkUrl}
+              key={`${confirmedArtworkUrl}-${artworkVersion}`}
+              src={confirmedArtworkUrl}
               protocol="halfBlock"
               width={imageWidth}
               height={imageHeight}

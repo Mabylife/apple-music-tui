@@ -211,9 +211,11 @@ export class CiderAPI {
 
   static async getTrackInfo(trackId: string): Promise<MusicItem | null> {
     try {
+      // Use a unified request key 'player-track-info' to cancel ANY previous track info request
+      // This prevents race conditions where an old slow request overwrites a newer one
       const result = await this.request("POST", "/api/v1/amapi/run-v3", {
         path: `/v1/catalog/${STOREFRONT}/songs/${trackId}`,
-      }, `track-info-${trackId}`);
+      }, 'player-track-info');
 
       const track = result?.data?.data?.[0];
       if (!track) return null;
@@ -221,6 +223,7 @@ export class CiderAPI {
       return this.parseItem(track, 0);
     } catch (error) {
       // Silently fail - avoid log spam in TUI
+      // This includes AbortError when request is cancelled
       return null;
     }
   }
