@@ -12,6 +12,7 @@ interface LayerData {
   id: string;
   items: Item[];
   selectedIndex: number;
+  loadingMessage?: string;
 }
 
 interface BrowserProps {
@@ -22,6 +23,7 @@ interface BrowserProps {
   isWide: boolean;
   search: string;
   isSearchFocused: boolean;
+  nowPlayingId?: string | null;
 }
 
 export const Browser: React.FC<BrowserProps> = ({
@@ -32,6 +34,7 @@ export const Browser: React.FC<BrowserProps> = ({
   isWide,
   search,
   isSearchFocused,
+  nowPlayingId,
 }) => {
   const closedCount = layers.length - 1;
   const closedWidthPercent = 20;
@@ -69,6 +72,8 @@ export const Browser: React.FC<BrowserProps> = ({
             isClosed={index !== activeLayerIndex}
             width={calculateWidth(index)}
             height={layerHeight}
+            loadingMessage={layer.loadingMessage}
+            nowPlayingId={nowPlayingId}
           />
         ))}
       </Box>

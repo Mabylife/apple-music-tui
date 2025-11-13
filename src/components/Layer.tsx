@@ -13,6 +13,8 @@ interface LayerProps {
   isClosed: boolean;
   width: number;
   height: number;
+  loadingMessage?: string;
+  nowPlayingId?: string | null;
 }
 
 export const Layer: React.FC<LayerProps> = ({
@@ -22,6 +24,8 @@ export const Layer: React.FC<LayerProps> = ({
   isClosed,
   width,
   height,
+  loadingMessage,
+  nowPlayingId,
 }) => {
   // Calculate visible items based on height
   // Each item takes 1 line, account for borders (2 lines) and padding
@@ -65,7 +69,12 @@ export const Layer: React.FC<LayerProps> = ({
         overflow="hidden"
         width={width - 2}
       >
-        {isClosed ? (
+        {loadingMessage ? (
+          // Display loading message
+          <Box overflow="hidden">
+            <Text color="gray">{loadingMessage}</Text>
+          </Box>
+        ) : isClosed ? (
           // When closed, show the selected item at its original position
           <>
             {Array.from({ length: selectedIndex - scrollOffset }).map(
@@ -78,13 +87,15 @@ export const Layer: React.FC<LayerProps> = ({
             <Box overflow="hidden">
               {(() => {
                 const label = items[selectedIndex]?.label || "";
+                const itemId = items[selectedIndex]?.id || "";
                 const maxTextWidth = width - 4; // Account for borders and padding
                 const truncatedLabel =
                   label.length > maxTextWidth
                     ? label.slice(0, maxTextWidth - 3) + "..."
                     : label;
+                const isNowPlaying = nowPlayingId && itemId === nowPlayingId;
                 return (
-                  <Text color="gray" wrap="truncate-end">
+                  <Text color={isNowPlaying ? "cyan" : "gray"} wrap="truncate-end">
                     {truncatedLabel}
                   </Text>
                 );
@@ -100,15 +111,20 @@ export const Layer: React.FC<LayerProps> = ({
               item.label.length > maxTextWidth
                 ? item.label.slice(0, maxTextWidth - 3) + "..."
                 : item.label;
+            
+            const isNowPlaying = nowPlayingId && item.id === nowPlayingId;
+            const isSelected = actualIndex === selectedIndex && isActive;
+            
+            let textColor = "gray";
+            if (isNowPlaying) {
+              textColor = "cyan";
+            } else if (isSelected) {
+              textColor = "white";
+            }
 
             return (
               <Box key={item.id} overflow="hidden">
-                <Text
-                  color={
-                    actualIndex === selectedIndex && isActive ? "white" : "gray"
-                  }
-                  wrap="truncate-end"
-                >
+                <Text color={textColor} wrap="truncate-end">
                   {truncatedLabel}
                 </Text>
               </Box>

@@ -17,3 +17,15 @@ In the First and the Second layer, the Artist name should be shown after the tra
 ## [x] Selected item should be remained when opening a new layer
 
 When opening a new layer (for example, pressing Enter on an album to open its tracks), the selected item should be displayed in the same position as it was in the previous layer (gray). And other items in the previous layer and not be selected should be hidden.
+
+## [x] list item loading indicator
+
+When selecting a list item, should open a layer immediately and display a loading placeholder while loading the content.
+
+don't hard code this thing, since we will be outputing different things in the future, like `launching...`, `deleting...`, etc.
+
+```this will be the place holder for loading list's items
+loading...
+```
+
+Should not open a layer when user select an [track] item, because tracks are loaded instantly.
