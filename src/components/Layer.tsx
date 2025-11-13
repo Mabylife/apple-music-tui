@@ -4,6 +4,7 @@ import { Box, Text } from "ink";
 interface Item {
   id: string;
   label: string;
+  isPlayable?: boolean;
 }
 
 interface LayerProps {
@@ -86,16 +87,26 @@ export const Layer: React.FC<LayerProps> = ({
             )}
             <Box overflow="hidden">
               {(() => {
-                const label = items[selectedIndex]?.label || "";
-                const itemId = items[selectedIndex]?.id || "";
+                const item = items[selectedIndex];
+                const label = item?.label || "";
+                const itemId = item?.id || "";
+                const isPlayable = item?.isPlayable !== false;
                 const maxTextWidth = width - 4; // Account for borders and padding
                 const truncatedLabel =
                   label.length > maxTextWidth
                     ? label.slice(0, maxTextWidth - 3) + "..."
                     : label;
                 const isNowPlaying = nowPlayingId && itemId === nowPlayingId;
+
+                let textColor = "gray";
+                if (!isPlayable) {
+                  textColor = "gray"; // black for unplayable
+                } else if (isNowPlaying) {
+                  textColor = "cyan";
+                }
+
                 return (
-                  <Text color={isNowPlaying ? "cyan" : "gray"} wrap="truncate-end">
+                  <Text color={textColor} wrap="truncate-end">
                     {truncatedLabel}
                   </Text>
                 );
@@ -111,12 +122,15 @@ export const Layer: React.FC<LayerProps> = ({
               item.label.length > maxTextWidth
                 ? item.label.slice(0, maxTextWidth - 3) + "..."
                 : item.label;
-            
+
+            const isPlayable = item.isPlayable !== false;
             const isNowPlaying = nowPlayingId && item.id === nowPlayingId;
             const isSelected = actualIndex === selectedIndex && isActive;
-            
+
             let textColor = "gray";
-            if (isNowPlaying) {
+            if (!isPlayable && isSelected) {
+              textColor = "red"; // Dark gray for unplayable tracks
+            } else if (isNowPlaying) {
               textColor = "cyan";
             } else if (isSelected) {
               textColor = "white";

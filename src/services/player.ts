@@ -95,15 +95,6 @@ export class PlayerAPI {
 
   static async getAutoPlayMode(): Promise<any> {
     const result = await this.request("GET", "/api/v1/playback/autoplay");
-    console.error(
-      `getAutoPlayMode: result=${JSON.stringify(result)}, result.value=${
-        result.value
-      }, typeof=${typeof result.value}`
-    );
-    const returnValue = result.value;
-    console.error(
-      `getAutoPlayMode: will return ${returnValue}, typeof=${typeof returnValue}`
-    );
-    return returnValue;
+    return result.value;
   }
 }

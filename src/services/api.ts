@@ -7,6 +7,7 @@ export interface MusicItem {
   label: string;
   icon: string;
   rawData?: any;
+  isPlayable?: boolean; // Track if item can be played
 }
 
 export class CiderAPI {
@@ -188,6 +189,28 @@ export class CiderAPI {
     const type = item.type;
     let label = "";
     let icon = "";
+    
+    // Check if item is playable
+    let isPlayable = true;
+    
+    if (type === "songs") {
+      const attributes = item.attributes || {};
+      
+      // Most reliable check: durationInMillis
+      // Prerelease tracks typically have duration of 0, null, or missing
+      const duration = attributes.durationInMillis;
+      const hasDuration = duration != null && duration > 0;
+      
+      // Secondary check: playParams must exist for playable songs
+      const hasPlayParams = !!(attributes.playParams || item.playParams);
+      
+      // Track is unplayable if missing duration or playParams
+      
+      // Song is playable if:
+      // - Has valid duration (> 0), AND
+      // - Has playParams
+      isPlayable = hasDuration && hasPlayParams;
+    }
 
     switch (type) {
       case "songs":
@@ -225,6 +248,7 @@ export class CiderAPI {
       label,
       icon,
       rawData: item,
+      isPlayable,
     };
   }
 }

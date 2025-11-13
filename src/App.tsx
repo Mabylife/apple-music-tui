@@ -45,7 +45,7 @@ export const App: React.FC = () => {
   const [message, setMessage] = useState("");
   const [playerUpdateTrigger, setPlayerUpdateTrigger] = useState(0);
   const [nowPlayingId, setNowPlayingId] = useState<string | null>(null);
-  
+
   // Use ref for isChangingTrack to avoid stale closures and ensure consistency
   const isChangingTrackRef = useRef(false);
   const setIsChangingTrack = (value: boolean) => {
@@ -55,19 +55,22 @@ export const App: React.FC = () => {
   // Load recommendations function
   const loadRecommendations = async () => {
     const loadingLayerId = layers[0]?.id || String(layerIdCounter++);
-    
+
     try {
       const items = await CiderAPI.getRecommendations(10);
       setLayers([
         {
           id: loadingLayerId,
-          items: items.map((item): MusicItem => ({
-            id: item.id,
-            label: `${item.icon}  ${item.label}`,
-            type: item.type,
-            icon: item.icon,
-            rawData: item.rawData,
-          })),
+          items: items.map(
+            (item): MusicItem => ({
+              id: item.id,
+              label: `${item.icon}  ${item.label}`,
+              type: item.type,
+              icon: item.icon,
+              rawData: item.rawData,
+              isPlayable: item.isPlayable,
+            })
+          ),
           selectedIndex: 0,
           loadingMessage: undefined,
         },
@@ -136,9 +139,9 @@ export const App: React.FC = () => {
               trackEndTimeout = null;
               return;
             }
-            
+
             setIsChangingTrack(true);
-            
+
             try {
               const [shuffle, repeat] = await Promise.all([
                 PlayerAPI.getShuffleMode(),
@@ -270,19 +273,22 @@ export const App: React.FC = () => {
             },
           ]);
           setActiveLayerIndex(0);
-          
+
           CiderAPI.search(query, 20)
             .then((items) => {
               setLayers([
                 {
                   id: searchLayerId,
-                  items: items.map((item): MusicItem => ({
-                    id: item.id,
-                    label: `${item.icon}  ${item.label}`,
-                    type: item.type,
-                    icon: item.icon,
-                    rawData: item.rawData,
-                  })),
+                  items: items.map(
+                    (item): MusicItem => ({
+                      id: item.id,
+                      label: `${item.icon}  ${item.label}`,
+                      type: item.type,
+                      icon: item.icon,
+                      rawData: item.rawData,
+                      isPlayable: item.isPlayable,
+                    })
+                  ),
                   selectedIndex: 0,
                   loadingMessage: undefined,
                 },
@@ -342,26 +348,23 @@ export const App: React.FC = () => {
       if (key.leftArrow) {
         // Previous using virtual queue - prevent concurrent requests
         if (isChangingTrackRef.current) {
-          console.log("Skipping previous: already changing track");
           return;
         }
-        
+
         const prevIndex = QueueService.getPreviousIndex();
         if (prevIndex === null) {
-          console.log("No previous track available");
           return;
         }
-        
+
         setIsChangingTrack(true);
         QueueService.updateCurrentIndex(prevIndex);
         const track = QueueService.getCurrentTrack();
-        
+
         if (!track) {
-          console.log("No track found at previous index");
           setIsChangingTrack(false);
           return;
         }
-        
+
         CiderAPI.playItem(track.id, "songs")
           .then(() => {
             setNowPlayingId(track.id);
@@ -369,6 +372,8 @@ export const App: React.FC = () => {
           })
           .catch((error) => {
             console.error("Failed to play previous:", error);
+            setMessage("Cannot play this track");
+            setTimeout(() => setMessage(""), 2000);
           })
           .finally(() => {
             setIsChangingTrack(false);
@@ -377,28 +382,25 @@ export const App: React.FC = () => {
       } else if (key.rightArrow) {
         // Next using virtual queue - prevent concurrent requests
         if (isChangingTrackRef.current) {
-          console.log("Skipping next: already changing track");
           return;
         }
-        
+
         setIsChangingTrack(true);
-        
+
         Promise.all([PlayerAPI.getShuffleMode(), PlayerAPI.getRepeatMode()])
           .then(([shuffle, repeat]) => {
             const nextIndex = QueueService.getNextIndex(shuffle, repeat);
             if (nextIndex === null) {
-              console.log("No next track available");
               return null;
             }
-            
+
             QueueService.updateCurrentIndex(nextIndex);
             const track = QueueService.getCurrentTrack();
-            
+
             if (!track) {
-              console.log("No track found at next index");
               return null;
             }
-            
+
             return CiderAPI.playItem(track.id, "songs").then(() => track);
           })
           .then((track) => {
@@ -409,6 +411,8 @@ export const App: React.FC = () => {
           })
           .catch((error) => {
             console.error("Failed to play next:", error);
+            setMessage("Cannot play this track");
+            setTimeout(() => setMessage(""), 2000);
           })
           .finally(() => {
             setIsChangingTrack(false);
@@ -519,20 +523,28 @@ export const App: React.FC = () => {
 
       // Check if it's a song (not a category)
       if (itemType === "songs" && !selectedItem.rawData?.isTopTracks) {
+        // Check if the track is playable
+        if (selectedItem.isPlayable === false) {
+          setMessage("This track is not available");
+          setTimeout(() => setMessage(""), 2000);
+          return;
+        }
+
         // Determine if we're in a list context
         if (activeLayerIndex >= 1) {
           // We're in Layer 2+ (inside album/playlist/top tracks)
           const parentLayer = layers[activeLayerIndex];
           const allTracks = parentLayer.items.filter(
-            (item) => item.type === "songs"
+            (item) => item.type === "songs" && item.isPlayable !== false
           );
           const trackIndex = allTracks.findIndex((t) => t.id === itemId);
 
           if (allTracks.length > 1 && trackIndex !== -1) {
-            // Set up queue with all tracks
-            const sourceType = layers[activeLayerIndex - 1]?.items[
-              layers[activeLayerIndex - 1]?.selectedIndex
-            ]?.type;
+            // Set up queue with all playable tracks
+            const sourceType =
+              layers[activeLayerIndex - 1]?.items[
+                layers[activeLayerIndex - 1]?.selectedIndex
+              ]?.type;
             QueueService.setQueue(allTracks, trackIndex, {
               type:
                 sourceType === "albums"
@@ -555,10 +567,9 @@ export const App: React.FC = () => {
 
         // Play the selected track (with safeguard)
         if (isChangingTrackRef.current) {
-          console.log("Skipping play: already changing track");
           return;
         }
-        
+
         setIsChangingTrack(true);
         CiderAPI.playItem(itemId, "songs")
           .then(() => {
@@ -566,6 +577,21 @@ export const App: React.FC = () => {
           })
           .catch((error) => {
             console.error("Failed to play song:", error);
+            // Mark this track as unplayable in the current layer
+            setLayers((prev) => {
+              const newLayers = [...prev];
+              if (newLayers[activeLayerIndex]) {
+                newLayers[activeLayerIndex] = {
+                  ...newLayers[activeLayerIndex],
+                  items: newLayers[activeLayerIndex].items.map((item) =>
+                    item.id === itemId ? { ...item, isPlayable: false } : item
+                  ),
+                };
+              }
+              return newLayers;
+            });
+            setMessage("This track is not available for playback");
+            setTimeout(() => setMessage(""), 2000);
           })
           .finally(() => {
             setIsChangingTrack(false);
@@ -576,10 +602,9 @@ export const App: React.FC = () => {
       // Check if it's a station - play immediately without creating layer
       if (itemType === "stations") {
         if (isChangingTrackRef.current) {
-          console.log("Skipping station: already changing track");
           return;
         }
-        
+
         setIsChangingTrack(true);
         CiderAPI.playItem(itemId, "station")
           .catch((error) => {
@@ -650,13 +675,16 @@ export const App: React.FC = () => {
             if (loadingLayerIdx !== -1) {
               newLayers[loadingLayerIdx] = {
                 ...newLayers[loadingLayerIdx],
-                items: newItems.map((item): MusicItem => ({
-                  id: item.id,
-                  label: `${item.icon}  ${item.label}`,
-                  type: item.type,
-                  icon: item.icon,
-                  rawData: item.rawData,
-                })),
+                items: newItems.map(
+                  (item): MusicItem => ({
+                    id: item.id,
+                    label: `${item.icon}  ${item.label}`,
+                    type: item.type,
+                    icon: item.icon,
+                    rawData: item.rawData,
+                    isPlayable: item.isPlayable,
+                  })
+                ),
                 loadingMessage: undefined,
               };
             }

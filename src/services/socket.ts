@@ -43,12 +43,10 @@ export class SocketService {
     });
 
     this.socket.on("connect", () => {
-      console.log("Socket.IO connected");
       this.fetchNowPlaying();
     });
 
     this.socket.on("disconnect", () => {
-      console.log("Socket.IO disconnected");
     });
 
     // Listen for playback time changes

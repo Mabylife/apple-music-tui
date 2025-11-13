@@ -1,4 +1,4 @@
-# Thing that should be fixed
+# Things fiexed and to fix
 
 [x] - done
 
@@ -29,3 +29,13 @@ loading...
 ```
 
 Should not open a layer when user select an [track] item, because tracks are loaded instantly.
+
+## [x] Global: Log message manage
+
+This is a TUI app, so shouldn't be using log methods like `console.log`, this cause display flickering even if everything is working fine.
+
+`console.error` is acceptable for error handling, but not really recommended since the message won't be displayed properly, it will be covered by the Ink TUI rendering.
+
+There is an `setMessage` method in `App.tsx`, we should use that to display nessesary messages to users through CommandBar.
+
+For layer, there is a `loadingMessage` prop we can use to display loading messages.
