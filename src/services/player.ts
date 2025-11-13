@@ -57,6 +57,9 @@ export class PlayerAPI {
     });
   }
 
+  // DEPRECATED: These toggle methods are no longer used by TUI
+  // Playback states (shuffle, repeat, autoplay) are now managed locally by playbackStateService
+  // Keep these methods for potential future use or manual testing
   static async toggleShuffle(): Promise<void> {
     await this.request("POST", "/api/v1/playback/toggle-shuffle");
   }
@@ -83,6 +86,9 @@ export class PlayerAPI {
     return result.volume;
   }
 
+  // DEPRECATED: These getter methods are no longer used by TUI
+  // Playback states (shuffle, repeat, autoplay) are now managed locally by playbackStateService
+  // Keep these methods for potential future use or manual testing
   static async getShuffleMode(): Promise<number> {
     const result = await this.request("GET", "/api/v1/playback/shuffle-mode");
     return result.value;

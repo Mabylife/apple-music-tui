@@ -5,6 +5,7 @@ import { PlayerAPI } from "../services/player";
 import { CiderAPI, MusicItem } from "../services/api";
 import Image from "ink-picture";
 import { styleService } from "../services/style";
+import { playbackStateService } from "../services/playbackState";
 
 interface PlayerProps {
   isWide: boolean;
@@ -115,29 +116,20 @@ export const Player: React.FC<PlayerProps> = ({
   }, [nowPlayingId]);
 
   useEffect(() => {
-    const fetchPlaybackModes = async () => {
-      try {
-        const [shuffle, repeat] = await Promise.all([
-          PlayerAPI.getShuffleMode(),
-          PlayerAPI.getRepeatMode(),
-        ]);
-
-        // Direct fetch for autoplay to avoid type conversion bug in PlayerAPI
-        const autoplayRes = await fetch(
-          "http://localhost:10767/api/v1/playback/autoplay"
-        );
-        const autoplayData = (await autoplayRes.json()) as { value: boolean };
-        const autoplay = autoplayData.value;
-
-        setShuffleMode(shuffle);
-        setRepeatMode(repeat);
-        setAutoPlayMode(autoplay);
-      } catch (error) {
-        console.error("Failed to fetch playback modes:", error);
-      }
+    const updatePlaybackModes = () => {
+      const states = playbackStateService.getAllStates();
+      setShuffleMode(states.shuffle);
+      setRepeatMode(states.repeat);
+      setAutoPlayMode(states.autoplay);
     };
 
-    fetchPlaybackModes();
+    // Initial load
+    updatePlaybackModes();
+
+    // Listen for changes
+    const unsubscribe = playbackStateService.onChange(updatePlaybackModes);
+
+    return unsubscribe;
   }, [updateTrigger]);
 
   const formatTime = (millis: number): string => {

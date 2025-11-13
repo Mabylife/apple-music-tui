@@ -18,23 +18,23 @@ AM-TUI 預計不提供佇列檢視頁面，我們把播放佇列分成兩種狀�
 
 ## 佇列行為
 
-請先閱讀 Cider RPC 文件以了解 `shuffle` `repeat` `auto-play` 這三個狀態的意義。
+`shuffle` `repeat` `auto-play` 這三個狀態**完全由 TUI 本地管理**，儲存在 `~/.config/apple-music-tui/playback-state.json`，不依賴 Cider。
 
-若 shuffle 為關閉狀態，則播放佇列會依照歌曲在清單中的順序播放。
-若 shuffle 為開啟狀態， 則在當前歌曲播放完畢後，會隨機播放佇列中其餘的其中一首歌曲。
-若 repeat 為開啟狀態，則在播放完最後一首歌曲後，會把該播放清單重新加入佇列。
-若 repeat 為關閉狀態，則在播放完最後一首歌曲後，會停止播放並清空播放佇列。
-若 repeat 為單曲循環狀態，則會無限重複播放目前的歌曲。
-若 auto-play 為開啟狀態並且 repeat 為關閉狀態，則在播放完最後一首歌曲後，會自動播放下一首歌曲。
+若 shuffle 為關閉狀態（0），則播放佇列會依照歌曲在清單中的順序播放。
+若 shuffle 為開啟狀態（1）， 則在當前歌曲播放完畢後，會隨機播放佇列中其餘的其中一首歌曲。
+若 repeat 為開啟狀態（2），則在播放完最後一首歌曲後，會把該播放清單重新加入佇列。
+若 repeat 為關閉狀態（0），則在播放完最後一首歌曲後，會停止播放並清空播放佇列。
+若 repeat 為單曲循環狀態（1），則會無限重複播放目前的歌曲。
+若 auto-play 為開啟狀態（true）並且 repeat 為關閉狀態（0），則在播放完最後一首歌曲後，會自動播放推薦的下一首歌曲。
 
 ## UIUX (done)
 
-Cider RPC 提供為 `shuffle` `repeat` `auto-play` 三種狀態都設計了一個 GET 跟一個循環的 SET 方法，請參考 Cider RPC 文件。
+`shuffle` `repeat` `auto-play` 三種狀態由 `PlaybackStateService` 管理，提供同步的讀寫方法。
 
 `Ctrl + ->` 跳到下一首歌曲，使用 `Ctrl + <-` 跳到上一首歌曲。
-`Ctrl + R` 切換 repeat 狀態。
-`Ctrl + S` 切換 shuffle 狀態。
-`Ctrl + A` 切換 auto-play 狀態。
+`Ctrl + R` 切換 repeat 狀態（0 → 1 → 2 → 0）。
+`Ctrl + S` 切換 shuffle 狀態（0 ↔ 1）。
+`Ctrl + A` 切換 auto-play 狀態（false ↔ true）。
 
 ## 虛擬佇列系統實作架構
 
@@ -42,10 +42,35 @@ Cider RPC 提供為 `shuffle` `repeat` `auto-play` 三種狀態都設計了一�
 
 AM-TUI 採用虛擬佇列系統：
 - **TUI 完全掌控佇列邏輯**：維護完整的播放清單、當前播放位置、以及播放順序
+- **TUI 完全掌控播放狀態**：shuffle、repeat、autoplay 由 TUI 本地管理，儲存在 `~/.config/apple-music-tui/playback-state.json`
 - **Cider 僅作為播放器**：每次只接收單首歌曲的 URL 進行播放
 - **Cider 的內部佇列永遠只有 1 首歌**：TUI 負責決定「下一首是什麼」，然後依序傳送給 Cider
 
 這個設計讓 TUI 能完全控制播放邏輯，同時避免與 Cider 內建佇列系統產生衝突。
+
+### PlaybackStateService 設計
+
+建立 `src/services/playbackState.ts` 管理播放狀態：
+
+```typescript
+interface PlaybackState {
+  shuffle: number;   // 0 = off, 1 = on
+  repeat: number;    // 0 = off, 1 = one, 2 = all
+  autoplay: boolean; // false = off, true = on
+}
+```
+
+主要方法：
+- `getShuffleMode()` - 取得 shuffle 狀態
+- `getRepeatMode()` - 取得 repeat 狀態
+- `getAutoPlayMode()` - 取得 autoplay 狀態
+- `getAllStates()` - 取得所有狀態
+- `toggleShuffle()` - 切換 shuffle（0 ↔ 1）
+- `toggleRepeat()` - 切換 repeat（0 → 1 → 2 → 0）
+- `toggleAutoPlay()` - 切換 autoplay（false ↔ true）
+- `onChange(callback)` - 監聽狀態變更
+
+狀態會自動儲存到 `~/.config/apple-music-tui/playback-state.json`，TUI 重啟後狀態會保持。
 
 ### QueueService 設計
 
@@ -115,11 +140,10 @@ SocketService.onPlayback(async (data) => {
 });
 
 const handleTrackEnded = async () => {
-  const [shuffle, repeat, autoplay] = await Promise.all([
-    PlayerAPI.getShuffleMode(),
-    PlayerAPI.getRepeatMode(),
-    PlayerAPI.getAutoPlayMode(),
-  ]);
+  // 從本地狀態讀取（同步）
+  const shuffle = playbackStateService.getShuffleMode();
+  const repeat = playbackStateService.getRepeatMode();
+  const autoplay = playbackStateService.getAutoPlayMode();
 
   const nextIndex = QueueService.getNextIndex(shuffle, repeat);
 
@@ -150,10 +174,9 @@ const handleTrackEnded = async () => {
 ```typescript
 // 下一首
 if (key.ctrl && key.rightArrow) {
-  const [shuffle, repeat] = await Promise.all([
-    PlayerAPI.getShuffleMode(),
-    PlayerAPI.getRepeatMode(),
-  ]);
+  // 從本地狀態讀取（同步）
+  const shuffle = playbackStateService.getShuffleMode();
+  const repeat = playbackStateService.getRepeatMode();
   
   const nextIndex = QueueService.getNextIndex(shuffle, repeat);
   if (nextIndex !== null) {
@@ -217,29 +240,51 @@ static getNextIndex(shuffle: number, repeat: number): number | null {
 
 ### 實作步驟
 
-1. **建立 QueueService** - `src/services/queue.ts`
-2. **修改播放觸發點** - 所有 Layer 中按 Enter 播放的邏輯
-3. **實作播放結束監聽** - `handleTrackEnded()` 
-4. **改寫 Next/Previous** - `Ctrl + ←/→` 使用虛擬佇列
-5. **測試各種組合** - shuffle/repeat 的所有排列組合
+1. ✅ **建立 QueueService** - `src/services/queue.ts`
+2. ✅ **建立 PlaybackStateService** - `src/services/playbackState.ts`
+3. ✅ **修改播放觸發點** - 所有 Layer 中按 Enter 播放的邏輯
+4. ✅ **實作播放結束監聽** - `handleTrackEnded()` 
+5. ✅ **改寫 Next/Previous** - `Ctrl + ←/→` 使用虛擬佇列
+6. **實作 Autoplay** - 佇列結束時自動播放推薦歌曲（TODO）
+7. ✅ **測試各種組合** - shuffle/repeat 的所有排列組合
 
 ### 檔案結構
 
 ```
 src/
 ├── services/
-│   ├── api.ts            (已存在，已有 playItem 方法)
-│   ├── player.ts         (已存在)
-│   ├── socket.ts         (已存在)
-│   └── queue.ts          (新增 - 虛擬佇列管理)
+│   ├── api.ts             (已存在，已有 playItem 方法)
+│   ├── player.ts          (已存在，Cider API 方法標記為 DEPRECATED)
+│   ├── socket.ts          (已存在)
+│   ├── queue.ts           (已完成 - 虛擬佇列管理)
+│   └── playbackState.ts   (已完成 - 播放狀態管理)
 │
 ├── components/
-│   └── Layer*/           (需修改播放邏輯)
+│   ├── Player.tsx         (已修改 - 使用 playbackStateService)
+│   └── Layer*/            (已修改 - 播放邏輯)
 │
-└── App.tsx               (需修改 Enter 和 Ctrl+←/→ 邏輯)
+└── App.tsx                (已修改 - Enter 和 Ctrl+←/→ 邏輯)
 ```
 
-## Cider RPC 相關端點
+### 配置文件
+
+播放狀態儲存在：`~/.config/apple-music-tui/playback-state.json`
+
+```json
+{
+  "shuffle": 0,
+  "repeat": 0,
+  "autoplay": false
+}
+```
+
+## Cider RPC 相關端點（已棄用）
+
+**注意：以下 Cider RPC 端點不再被 TUI 使用。**
+
+播放狀態（shuffle、repeat、autoplay）現在由 TUI 本地的 `PlaybackStateService` 管理，儲存在 `~/.config/apple-music-tui/playback-state.json`。
+
+這些端點僅供參考或手動測試使用：
 
 ```md
 GET /repeat-mode

@@ -10,6 +10,7 @@ import { PlayerAPI } from "./services/player.js";
 import { QueueService } from "./services/queue.js";
 import { SocketService } from "./services/socket.js";
 import { styleService } from "./services/style.js";
+import { playbackStateService } from "./services/playbackState.js";
 
 interface LayerData {
   id: string;
@@ -372,10 +373,8 @@ export const App: React.FC = () => {
             }
 
             try {
-              const [shuffle, repeat] = await Promise.all([
-                PlayerAPI.getShuffleMode(),
-                PlayerAPI.getRepeatMode(),
-              ]);
+              const shuffle = playbackStateService.getShuffleMode();
+              const repeat = playbackStateService.getRepeatMode();
 
               const nextIndex = QueueService.getNextIndex(shuffle, repeat);
 
@@ -386,10 +385,22 @@ export const App: React.FC = () => {
                   requestTrackChange(nextTrack.id, "songs");
                 }
               } else {
-                // Queue ended
-                await PlayerAPI.stop();
-                setNowPlayingId(null);
-                QueueService.clearQueue();
+                // Queue ended - check autoplay
+                const queue = QueueService.getQueue();
+                const autoplay = playbackStateService.getAutoPlayMode();
+                const repeat = playbackStateService.getRepeatMode();
+                
+                if (autoplay && repeat === 0 && queue.mode === 'in-list') {
+                  // TODO: Autoplay 功能（播放推薦歌曲）
+                  await PlayerAPI.stop();
+                  setNowPlayingId(null);
+                  QueueService.clearQueue();
+                } else {
+                  // No autoplay: stop and clear
+                  await PlayerAPI.stop();
+                  setNowPlayingId(null);
+                  QueueService.clearQueue();
+                }
               }
             } catch (error) {
               console.error("Failed to handle track end:", error);
@@ -601,53 +612,33 @@ export const App: React.FC = () => {
         }
         
         // Regular tracks: use virtual queue
-        Promise.all([PlayerAPI.getShuffleMode(), PlayerAPI.getRepeatMode()])
-          .then(([shuffle, repeat]) => {
-            const nextIndex = QueueService.getNextIndex(shuffle, repeat);
-            if (nextIndex === null) {
-              return null;
-            }
+        const shuffle = playbackStateService.getShuffleMode();
+        const repeat = playbackStateService.getRepeatMode();
+        const nextIndex = QueueService.getNextIndex(shuffle, repeat);
+        if (nextIndex === null) {
+          return;
+        }
 
-            QueueService.updateCurrentIndex(nextIndex);
-            const track = QueueService.getCurrentTrack();
+        QueueService.updateCurrentIndex(nextIndex);
+        const track = QueueService.getCurrentTrack();
 
-            if (!track) {
-              return null;
-            }
+        if (!track) {
+          return;
+        }
 
-            requestTrackChange(track.id, "songs");
-            return track;
-          })
-          .catch((error) => {
-            console.error("Failed to get next track:", error);
-          });
+        requestTrackChange(track.id, "songs");
         return;
       } else if (input === "s" || input === "S" || input === "\x13") {
-        PlayerAPI.toggleShuffle()
-          .then(() => {
-            setPlayerUpdateTrigger((prev) => prev + 1);
-          })
-          .catch((error) => {
-            console.error("Failed to toggle shuffle:", error);
-          });
+        playbackStateService.toggleShuffle();
+        setPlayerUpdateTrigger((prev) => prev + 1);
         return;
       } else if (input === "r" || input === "R" || input === "\x12") {
-        PlayerAPI.toggleRepeat()
-          .then(() => {
-            setPlayerUpdateTrigger((prev) => prev + 1);
-          })
-          .catch((error) => {
-            console.error("Failed to toggle repeat:", error);
-          });
+        playbackStateService.toggleRepeat();
+        setPlayerUpdateTrigger((prev) => prev + 1);
         return;
       } else if (input === "a" || input === "A" || input === "\x01") {
-        PlayerAPI.toggleAutoPlay()
-          .then(() => {
-            setPlayerUpdateTrigger((prev) => prev + 1);
-          })
-          .catch((error) => {
-            console.error("Failed to toggle autoplay:", error);
-          });
+        playbackStateService.toggleAutoPlay();
+        setPlayerUpdateTrigger((prev) => prev + 1);
         return;
       } else if (key.upArrow || input === "+") {
         // Volume up by 5%
