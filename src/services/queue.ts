@@ -175,6 +175,23 @@ export class QueueService {
     return { ...this.queue };
   }
 
+  static getRecentlyPlayedTracks(limit: number = 5): MusicItem[] {
+    if (!this.queue || !this.queue.tracks || this.queue.playedIndices.length === 0) {
+      return [];
+    }
+
+    const { tracks, playedIndices } = this.queue;
+    
+    // Get last N played indices (reverse order = most recent first)
+    const recentIndices = [...playedIndices]
+      .reverse()
+      .slice(0, limit)
+      .filter(i => i >= 0 && i < tracks.length);
+    
+    // Return the actual track objects
+    return recentIndices.map(i => tracks[i]).filter(track => track != null);
+  }
+
   static clearQueue(): void {
     this.queue = {
       mode: "single",

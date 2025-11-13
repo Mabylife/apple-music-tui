@@ -236,6 +236,68 @@ export const App: React.FC = () => {
     poll();
   };
   
+  // Auto-play handler: create station from recent tracks
+  const handleAutoPlay = async () => {
+    const autoplay = playbackStateService.getAutoPlayMode();
+    const repeat = playbackStateService.getRepeatMode();
+    
+    if (!autoplay || repeat !== 0) {
+      // No autoplay or repeat is on: stop and clear
+      await PlayerAPI.stop();
+      setNowPlayingId(null);
+      QueueService.clearQueue();
+      return;
+    }
+    
+    // Auto-play enabled: Create station from recently played tracks
+    try {
+      setMessage("Creating station from recent tracks...");
+      
+      // Get last 5 played tracks (or less if queue is smaller)
+      const recentTracks = QueueService.getRecentlyPlayedTracks(5);
+      
+      if (recentTracks.length > 0) {
+        // Extract track IDs
+        const trackIds = recentTracks.map(track => track.id);
+        
+        // Create station with multiple seeds
+        const stationId = await CiderAPI.createStationFromSongs(trackIds);
+        
+        if (stationId) {
+          setMessage(`Auto-playing station from ${trackIds.length} tracks...`);
+          
+          // Clear the old queue
+          QueueService.clearQueue();
+          
+          // Play the station using existing station logic
+          requestTrackChange(stationId, "stations");
+          
+          setTimeout(() => setMessage(""), 2000);
+        } else {
+          setMessage("Failed to create station");
+          await PlayerAPI.stop();
+          setNowPlayingId(null);
+          QueueService.clearQueue();
+          setTimeout(() => setMessage(""), 2000);
+        }
+      } else {
+        // No tracks to create station from
+        setMessage("No recent tracks for auto-play");
+        await PlayerAPI.stop();
+        setNowPlayingId(null);
+        QueueService.clearQueue();
+        setTimeout(() => setMessage(""), 2000);
+      }
+    } catch (error) {
+      console.error("Auto-play failed:", error);
+      setMessage("Auto-play failed");
+      await PlayerAPI.stop();
+      setNowPlayingId(null);
+      QueueService.clearQueue();
+      setTimeout(() => setMessage(""), 2000);
+    }
+  };
+  
   // Station navigation handler - lock/unlock mechanism with polling
   const handleStationNavigation = async (direction: 'next' | 'previous') => {
     // Check if locked
@@ -385,22 +447,8 @@ export const App: React.FC = () => {
                   requestTrackChange(nextTrack.id, "songs");
                 }
               } else {
-                // Queue ended - check autoplay
-                const queue = QueueService.getQueue();
-                const autoplay = playbackStateService.getAutoPlayMode();
-                const repeat = playbackStateService.getRepeatMode();
-                
-                if (autoplay && repeat === 0 && queue.mode === 'in-list') {
-                  // TODO: Autoplay 功能（播放推薦歌曲）
-                  await PlayerAPI.stop();
-                  setNowPlayingId(null);
-                  QueueService.clearQueue();
-                } else {
-                  // No autoplay: stop and clear
-                  await PlayerAPI.stop();
-                  setNowPlayingId(null);
-                  QueueService.clearQueue();
-                }
+                // Queue ended - trigger auto-play
+                await handleAutoPlay();
               }
             } catch (error) {
               console.error("Failed to handle track end:", error);
@@ -615,7 +663,12 @@ export const App: React.FC = () => {
         const shuffle = playbackStateService.getShuffleMode();
         const repeat = playbackStateService.getRepeatMode();
         const nextIndex = QueueService.getNextIndex(shuffle, repeat);
+        
         if (nextIndex === null) {
+          // No next track - trigger auto-play
+          handleAutoPlay().catch(error => {
+            console.error("Auto-play failed:", error);
+          });
           return;
         }
 

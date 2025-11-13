@@ -177,11 +177,6 @@ export const Player: React.FC<PlayerProps> = ({
   }, [trackInfo, playbackState]);
 
   const getPlaybackModeIcons = () => {
-    // Don't show playback modes when playing Station
-    if (isPlayingStation) {
-      return "";
-    }
-    
     const icons = [];
 
     // Shuffle: 0 = off, 1 = on
@@ -199,6 +194,11 @@ export const Player: React.FC<PlayerProps> = ({
     // Autoplay: false = off, true = on
     if (autoPlayMode === true) {
       icons.push("A");
+    }
+
+    if (isPlayingStation) {
+      icons.length = 0; // Clear all icons
+      icons.push("STATION"); // Show only Station icon
     }
 
     return icons.join(" ");

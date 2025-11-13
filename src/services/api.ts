@@ -293,4 +293,27 @@ export class CiderAPI {
       isPlayable,
     };
   }
+
+  static async createStationFromSongs(songIds: string[]): Promise<string | null> {
+    try {
+      if (songIds.length === 0) {
+        return null;
+      }
+      
+      // Apple Music doesn't support multi-seed custom stations via API
+      // Use the last (most recent) song to create a station
+      const lastSongId = songIds[songIds.length - 1];
+      
+      // Get station for this song
+      const result = await this.request("POST", "/api/v1/amapi/run-v3", {
+        path: `/v1/catalog/${STOREFRONT}/songs/${lastSongId}/station`,
+      });
+      
+      const stationId = result?.data?.data?.[0]?.id;
+      return stationId || null;
+    } catch (error) {
+      console.error("Failed to create station:", error);
+      return null;
+    }
+  }
 }
