@@ -50,7 +50,9 @@ requestTrackChange(stationId, "stations")
 開始播放 Station（使用現有 Station 播放機制）
 ```
 
-**注意**: 雖然我們獲取了 5 首最近播放的歌曲，但 Apple Music API 只支援**單首歌曲的 Station**，因此實際使用最後一首（最近的）來創建 Station。這樣仍能提供基於使用者最近聆聽習慣的推薦。
+**注意**: 雖然我們獲取了 5 首最近播放的歌曲，但 Apple Music API 只支援**單首歌曲的 Station**，因此實際使用**第一首**（最近播放的）來創建 Station。這樣能提供基於使用者最新聆聽習慣的推薦。
+
+**重要**: Apple Music Station 不一定會從 seed 歌曲開始播放，而是會根據 seed 推薦相似的歌曲。所以 Station 的第一首歌可能是任何相似的歌曲，包括原播放清單中的其他歌曲。
 
 ## 核心 API
 

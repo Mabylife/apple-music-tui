@@ -2,9 +2,17 @@
 
 本文件會說明本專案的播放佇列系統實作方式。
 
-## 佇列概述
+## 功能概述
 
-AM-TUI 預計不提供佇列檢視頁面，我們把播放佇列分成兩種狀態 `in List` `single`。
+AM-TUI 採用虛擬佇列系統，完全由 TUI 本地管理播放佇列邏輯，Cider 僅作為播放器使用。
+
+這樣設計可以帶來最好的使用者體驗，並且也能更積極的配合 TUI 渲染。
+
+AM-TUI 預計不提供佇列檢視頁面，但仍然能確保播放邏輯的完整性與使用者體驗。
+
+## 佇列狀態
+
+我們把播放佇列分成兩種狀態 `in List` `single`。
 
 會有三種數值用於決定播放佇列行為的狀態 `shuffle` `repeat` `auto-play`，這三種狀態會影響播放佇列的行為，並且應該要用簡單的 Nerdfont 圖示來顯示在 `Player` - `info` 裡面。
 
@@ -41,6 +49,7 @@ AM-TUI 預計不提供佇列檢視頁面，我們把播放佇列分成兩種狀�
 ### 核心概念
 
 AM-TUI 採用虛擬佇列系統：
+
 - **TUI 完全掌控佇列邏輯**：維護完整的播放清單、當前播放位置、以及播放順序
 - **TUI 完全掌控播放狀態**：shuffle、repeat、autoplay 由 TUI 本地管理，儲存在 `~/.config/apple-music-tui/playback-state.json`
 - **Cider 僅作為播放器**：每次只接收單首歌曲的 URL 進行播放
@@ -54,13 +63,14 @@ AM-TUI 採用虛擬佇列系統：
 
 ```typescript
 interface PlaybackState {
-  shuffle: number;   // 0 = off, 1 = on
-  repeat: number;    // 0 = off, 1 = one, 2 = all
+  shuffle: number; // 0 = off, 1 = on
+  repeat: number; // 0 = off, 1 = one, 2 = all
   autoplay: boolean; // false = off, true = on
 }
 ```
 
 主要方法：
+
 - `getShuffleMode()` - 取得 shuffle 狀態
 - `getRepeatMode()` - 取得 repeat 狀態
 - `getAutoPlayMode()` - 取得 autoplay 狀態
@@ -78,12 +88,13 @@ interface PlaybackState {
 
 ```typescript
 interface QueueState {
-  mode: 'in-list' | 'single';
-  tracks: Track[];              // 完整歌曲清單
-  currentIndex: number;          // 當前播放位置
-  playedIndices: number[];       // 已播放的 index（用於 shuffle）
-  sourceContext: {               // 來源上下文
-    type: 'playlist' | 'album' | 'top-tracks' | 'single';
+  mode: "in-list" | "single";
+  tracks: Track[]; // 完整歌曲清單
+  currentIndex: number; // 當前播放位置
+  playedIndices: number[]; // 已播放的 index（用於 shuffle）
+  sourceContext: {
+    // 來源上下文
+    type: "playlist" | "album" | "top-tracks" | "single";
     id?: string;
     name?: string;
   } | null;
@@ -91,6 +102,7 @@ interface QueueState {
 ```
 
 主要方法：
+
 - `setQueue(tracks, startIndex, context)` - 設定新佇列（從 playlist/album 播放）
 - `setSingleTrack(track)` - 單曲模式
 - `getNextIndex(shuffle, repeat)` - 根據模式計算下一首的 index
@@ -102,29 +114,31 @@ interface QueueState {
 ### 播放觸發邏輯
 
 **在 Layer 2/3（Playlist/Album/TopTracks）中：**
+
 ```typescript
 const handlePlayTrack = async (trackIndex: number) => {
   // 1. 獲取完整清單
   const tracks = await fetchAllTracks();
-  
+
   // 2. 設定虛擬佇列
   QueueService.setQueue(tracks, trackIndex, {
-    type: 'playlist',
+    type: "playlist",
     id: playlistId,
     name: playlistName,
   });
-  
+
   // 3. 播放選中的歌曲
   const track = tracks[trackIndex];
-  await CiderAPI.playItem(track.id, 'songs');
+  await CiderAPI.playItem(track.id, "songs");
 };
 ```
 
 **在 Layer 1（直接播放單曲）中：**
+
 ```typescript
 const handlePlaySingleTrack = async (track: Track) => {
   QueueService.setSingleTrack(track);
-  await CiderAPI.playItem(track.id, 'songs');
+  await CiderAPI.playItem(track.id, "songs");
 };
 ```
 
@@ -134,7 +148,7 @@ const handlePlaySingleTrack = async (track: Track) => {
 
 ```typescript
 SocketService.onPlayback(async (data) => {
-  if (data.status === 'ended' || data.playbackProgress >= 0.99) {
+  if (data.status === "ended" || data.playbackProgress >= 0.99) {
     await handleTrackEnded();
   }
 });
@@ -152,12 +166,12 @@ const handleTrackEnded = async () => {
     QueueService.updateCurrentIndex(nextIndex);
     const nextTrack = QueueService.getCurrentTrack();
     if (nextTrack) {
-      await CiderAPI.playItem(nextTrack.id, 'songs');
+      await CiderAPI.playItem(nextTrack.id, "songs");
     }
   } else {
     // 播放完畢：根據 autoplay 決定行為
     const queue = QueueService.getQueue();
-    if (autoplay && repeat === 0 && queue.mode === 'in-list') {
+    if (autoplay && repeat === 0 && queue.mode === "in-list") {
       // TODO: Autoplay 功能（播放推薦歌曲）
     } else {
       await PlayerAPI.stop();
@@ -177,12 +191,12 @@ if (key.ctrl && key.rightArrow) {
   // 從本地狀態讀取（同步）
   const shuffle = playbackStateService.getShuffleMode();
   const repeat = playbackStateService.getRepeatMode();
-  
+
   const nextIndex = QueueService.getNextIndex(shuffle, repeat);
   if (nextIndex !== null) {
     QueueService.updateCurrentIndex(nextIndex);
     const track = QueueService.getCurrentTrack();
-    if (track) await CiderAPI.playItem(track.id, 'songs');
+    if (track) await CiderAPI.playItem(track.id, "songs");
   }
   return;
 }
@@ -193,7 +207,7 @@ if (key.ctrl && key.leftArrow) {
   if (prevIndex !== null) {
     QueueService.updateCurrentIndex(prevIndex);
     const track = QueueService.getCurrentTrack();
-    if (track) await CiderAPI.playItem(track.id, 'songs');
+    if (track) await CiderAPI.playItem(track.id, "songs");
   }
   return;
 }
@@ -204,18 +218,18 @@ if (key.ctrl && key.leftArrow) {
 ```typescript
 static getNextIndex(shuffle: number, repeat: number): number | null {
   const { tracks, currentIndex, playedIndices } = this.queue;
-  
+
   // Repeat one: 重複當前歌曲
   if (repeat === 1) {
     return currentIndex;
   }
-  
+
   // Shuffle: 隨機選擇未播放的歌曲
   if (shuffle === 1) {
     const unplayedIndices = tracks
       .map((_, i) => i)
       .filter(i => !playedIndices.includes(i));
-    
+
     if (unplayedIndices.length > 0) {
       // 還有未播放的歌曲
       return unplayedIndices[Math.floor(Math.random() * unplayedIndices.length)];
@@ -226,7 +240,7 @@ static getNextIndex(shuffle: number, repeat: number): number | null {
     }
     return null; // 播放完畢
   }
-  
+
   // 順序播放
   const nextIndex = currentIndex + 1;
   if (nextIndex < tracks.length) {
@@ -243,7 +257,7 @@ static getNextIndex(shuffle: number, repeat: number): number | null {
 1. ✅ **建立 QueueService** - `src/services/queue.ts`
 2. ✅ **建立 PlaybackStateService** - `src/services/playbackState.ts`
 3. ✅ **修改播放觸發點** - 所有 Layer 中按 Enter 播放的邏輯
-4. ✅ **實作播放結束監聽** - `handleTrackEnded()` 
+4. ✅ **實作播放結束監聽** - `handleTrackEnded()`
 5. ✅ **改寫 Next/Previous** - `Ctrl + ←/→` 使用虛擬佇列
 6. **實作 Autoplay** - 佇列結束時自動播放推薦歌曲（TODO）
 7. ✅ **測試各種組合** - shuffle/repeat 的所有排列組合

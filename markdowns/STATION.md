@@ -4,6 +4,10 @@
 
 最後更新：2025-11-13
 
+## 功能概述
+
+當使用者進入 Station 模式之後，將會使用特別的佇列系統，本來完全由 TUI 管理的播放佇列將會被 Cider 接管，所有的播放與切換動作都會直接呼叫 Cider 的 API 來完成。
+
 ## 背景
 
 Apple Music 的 Station 是一種動態生成的播放清單，曲目會根據使用者的喜好與聆聽習慣自動調整。這與一般的播放清單不同，因為使用者無法直接查詢或控制 Station 中的具體曲目。
@@ -270,10 +274,12 @@ const getPlaybackModeIcons = () => {
 ### Cider RPC API
 
 - `POST /api/v1/playback/play-item`：播放 Station
-- `POST /api/v1/playback/next`：下一首
-- `POST /api/v1/playback/previous`：上一首
+- `POST /api/v1/playback/next`：下一首（需要空 JSON body `{}`）
+- `POST /api/v1/playback/previous`：上一首（需要空 JSON body `{}`）
 - `GET /api/v1/playback/now-playing`：取得當前播放資訊
-- `POST /api/v1/playback/stop`：停止播放（初始化時使用）
+- `POST /api/v1/playback/stop`：停止播放（初始化時使用，需要空 JSON body `{}`）
+
+**重要**：所有 POST 端點都需要設置 `Content-Type: application/json` 並傳送空 JSON body `{}`，否則會返回 400 錯誤。
 
 ### 回傳格式
 
