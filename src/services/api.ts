@@ -301,12 +301,12 @@ export class CiderAPI {
       }
       
       // Apple Music doesn't support multi-seed custom stations via API
-      // Use the last (most recent) song to create a station
-      const lastSongId = songIds[songIds.length - 1];
+      // Use the first song (most recently played) to create a station
+      const mostRecentSongId = songIds[0];
       
       // Get station for this song
       const result = await this.request("POST", "/api/v1/amapi/run-v3", {
-        path: `/v1/catalog/${STOREFRONT}/songs/${lastSongId}/station`,
+        path: `/v1/catalog/${STOREFRONT}/songs/${mostRecentSongId}/station`,
       });
       
       const stationId = result?.data?.data?.[0]?.id;

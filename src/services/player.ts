@@ -28,27 +28,27 @@ export class PlayerAPI {
 
   // POST endpoints - Playback controls
   static async play(): Promise<void> {
-    await this.request("POST", "/api/v1/playback/play");
+    await this.request("POST", "/api/v1/playback/play", {});
   }
 
   static async pause(): Promise<void> {
-    await this.request("POST", "/api/v1/playback/pause");
+    await this.request("POST", "/api/v1/playback/pause", {});
   }
 
   static async playPause(): Promise<void> {
-    await this.request("POST", "/api/v1/playback/playpause");
+    await this.request("POST", "/api/v1/playback/playpause", {});
   }
 
   static async stop(): Promise<void> {
-    await this.request("POST", "/api/v1/playback/stop");
+    await this.request("POST", "/api/v1/playback/stop", {});
   }
 
   static async next(): Promise<void> {
-    await this.request("POST", "/api/v1/playback/next");
+    await this.request("POST", "/api/v1/playback/next", {});
   }
 
   static async previous(): Promise<void> {
-    await this.request("POST", "/api/v1/playback/previous");
+    await this.request("POST", "/api/v1/playback/previous", {});
   }
 
   static async setVolume(volume: number): Promise<void> {
@@ -61,15 +61,15 @@ export class PlayerAPI {
   // Playback states (shuffle, repeat, autoplay) are now managed locally by playbackStateService
   // Keep these methods for potential future use or manual testing
   static async toggleShuffle(): Promise<void> {
-    await this.request("POST", "/api/v1/playback/toggle-shuffle");
+    await this.request("POST", "/api/v1/playback/toggle-shuffle", {});
   }
 
   static async toggleRepeat(): Promise<void> {
-    await this.request("POST", "/api/v1/playback/toggle-repeat");
+    await this.request("POST", "/api/v1/playback/toggle-repeat", {});
   }
 
   static async toggleAutoPlay(): Promise<void> {
-    await this.request("POST", "/api/v1/playback/toggle-autoplay");
+    await this.request("POST", "/api/v1/playback/toggle-autoplay", {});
   }
 
   static async seek(position: number): Promise<void> {
