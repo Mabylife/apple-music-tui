@@ -12,7 +12,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
 }) => {
   return (
     <Box
-      borderStyle="single"
+      borderStyle="round"
       borderColor={isFocused ? "white" : "gray"}
       paddingX={1}
       height={3}

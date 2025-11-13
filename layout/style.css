@@ -68,7 +68,7 @@ body {
 
 .lists {
   flex-grow: 1;
-  background-color: darkgray;
+  background-color: dark gray;
   width: 100%;
   display: flex;
   justify-content: flex-start;
@@ -79,7 +79,7 @@ body {
 .layer {
   width: 100%;
   height: 100%;
-  background-color: darkgray;
+  background-color: dark gray;
   display: flex;
   flex-direction: column;
   min-width: 0; /* allow children to shrink and not force overflow */
@@ -133,7 +133,7 @@ body {
 .layer.closed {
   width: 20%;
   background-color: black;
-  border: 0.1rem solid darkgray;
+  border: 0.1rem solid dark gray;
 }
 
 .player {
@@ -151,7 +151,7 @@ body {
 
 .info {
   width: 100%;
-  background-color: darkgray;
+  background-color: dark gray;
   flex-grow: 1;
   display: flex;
   justify-content: center;

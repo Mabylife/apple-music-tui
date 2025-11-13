@@ -18,136 +18,141 @@ interface LayerProps {
   nowPlayingId?: string | null;
 }
 
-export const Layer: React.FC<LayerProps> = React.memo(({
-  items,
-  selectedIndex,
-  isActive,
-  isClosed,
-  width,
-  height,
-  loadingMessage,
-  nowPlayingId,
-}) => {
-  // Calculate visible items based on height
-  // Each item takes 1 line, account for borders (2 lines) and padding
-  const maxVisibleItems = Math.max(1, height - 2);
-  const maxTextWidth = width - 4; // Account for borders and padding
+export const Layer: React.FC<LayerProps> = React.memo(
+  ({
+    items,
+    selectedIndex,
+    isActive,
+    isClosed,
+    width,
+    height,
+    loadingMessage,
+    nowPlayingId,
+  }) => {
+    // Calculate visible items based on height
+    // Each item takes 1 line, account for borders (2 lines) and padding
+    const maxVisibleItems = Math.max(1, height - 2);
+    const maxTextWidth = width - 4; // Account for borders and padding
 
-  // Calculate scroll offset to keep selected item visible
-  const scrollOffset = useMemo(() => {
-    if (items.length <= maxVisibleItems) {
-      return 0;
-    }
+    // Calculate scroll offset to keep selected item visible
+    const scrollOffset = useMemo(() => {
+      if (items.length <= maxVisibleItems) {
+        return 0;
+      }
 
-    // Try to center the selected item
-    const halfVisible = Math.floor(maxVisibleItems / 2);
-    let offset = selectedIndex - halfVisible;
+      // Try to center the selected item
+      const halfVisible = Math.floor(maxVisibleItems / 2);
+      let offset = selectedIndex - halfVisible;
 
-    // Clamp to valid range
-    offset = Math.max(0, offset);
-    offset = Math.min(items.length - maxVisibleItems, offset);
+      // Clamp to valid range
+      offset = Math.max(0, offset);
+      offset = Math.min(items.length - maxVisibleItems, offset);
 
-    return offset;
-  }, [selectedIndex, items.length, maxVisibleItems]);
+      return offset;
+    }, [selectedIndex, items.length, maxVisibleItems]);
 
-  const visibleItems = useMemo(() => 
-    items.slice(scrollOffset, scrollOffset + maxVisibleItems),
-    [items, scrollOffset, maxVisibleItems]
-  );
+    const visibleItems = useMemo(
+      () => items.slice(scrollOffset, scrollOffset + maxVisibleItems),
+      [items, scrollOffset, maxVisibleItems]
+    );
 
-  // Memoize truncation helper
-  const truncateLabel = useMemo(() => (label: string) => {
-    return label.length > maxTextWidth
-      ? label.slice(0, maxTextWidth - 3) + "..."
-      : label;
-  }, [maxTextWidth]);
+    // Memoize truncation helper
+    const truncateLabel = useMemo(
+      () => (label: string) => {
+        return label.length > maxTextWidth
+          ? label.slice(0, maxTextWidth - 3) + "..."
+          : label;
+      },
+      [maxTextWidth]
+    );
 
-  return (
-    <Box
-      width={width}
-      height={height}
-      borderStyle="single"
-      borderColor={isActive ? "gray" : "gray"}
-      flexDirection="column"
-      paddingX={1}
-      overflow="hidden"
-    >
+    return (
       <Box
+        width={width}
+        height={height}
+        borderStyle="round"
+        borderColor={isActive ? "gray" : "gray"}
         flexDirection="column"
-        flexGrow={1}
+        paddingX={1}
         overflow="hidden"
-        width={width - 2}
       >
-        {loadingMessage ? (
-          // Display loading message
-          <Box overflow="hidden">
-            <Text color="gray">{loadingMessage}</Text>
-          </Box>
-        ) : isClosed ? (
-          // When closed, show the selected item at its original position
-          <>
-            {Array.from({ length: selectedIndex - scrollOffset }).map(
-              (_, i) => (
-                <Box key={`spacer-${i}`} overflow="hidden">
-                  <Text> </Text>
-                </Box>
-              )
-            )}
+        <Box
+          flexDirection="column"
+          flexGrow={1}
+          overflow="hidden"
+          width={width - 2}
+        >
+          {loadingMessage ? (
+            // Display loading message
             <Box overflow="hidden">
-              {(() => {
-                const item = items[selectedIndex];
-                const label = item?.label || "";
-                const itemId = item?.id || "";
-                const isPlayable = item?.isPlayable !== false;
-                const truncatedLabel = truncateLabel(label);
-                const isNowPlaying = nowPlayingId && itemId === nowPlayingId;
+              <Text color="gray">{loadingMessage}</Text>
+            </Box>
+          ) : isClosed ? (
+            // When closed, show the selected item at its original position
+            <>
+              {Array.from({ length: selectedIndex - scrollOffset }).map(
+                (_, i) => (
+                  <Box key={`spacer-${i}`} overflow="hidden">
+                    <Text> </Text>
+                  </Box>
+                )
+              )}
+              <Box overflow="hidden">
+                {(() => {
+                  const item = items[selectedIndex];
+                  const label = item?.label || "";
+                  const itemId = item?.id || "";
+                  const isPlayable = item?.isPlayable !== false;
+                  const truncatedLabel = truncateLabel(label);
+                  const isNowPlaying = nowPlayingId && itemId === nowPlayingId;
 
-                let textColor = "gray";
-                if (!isPlayable) {
-                  textColor = "gray"; // black for unplayable
-                } else if (isNowPlaying) {
-                  textColor = "cyan";
-                }
+                  let textColor = "gray";
+                  if (!isPlayable) {
+                    textColor = "gray"; // black for unplayable
+                  } else if (isNowPlaying) {
+                    textColor = "cyan";
+                  }
 
-                return (
+                  return (
+                    <Text color={textColor} wrap="truncate-end">
+                      {truncatedLabel}
+                    </Text>
+                  );
+                })()}
+              </Box>
+            </>
+          ) : (
+            // When open, show all visible items with truncation
+            visibleItems.map((item, index) => {
+              const actualIndex = scrollOffset + index;
+              const truncatedLabel = truncateLabel(item.label);
+
+              const isPlayable = item.isPlayable !== false;
+              const isNowPlaying = nowPlayingId && item.id === nowPlayingId;
+              const isSelected = actualIndex === selectedIndex && isActive;
+
+              let textColor = "gray";
+              if (!isPlayable && isSelected) {
+                textColor = "red"; // Dark gray for unplayable tracks
+              } else if (isNowPlaying) {
+                textColor = "cyan";
+              } else if (isSelected) {
+                textColor = "white";
+              }
+
+              return (
+                <Box key={item.id} overflow="hidden">
                   <Text color={textColor} wrap="truncate-end">
                     {truncatedLabel}
                   </Text>
-                );
-              })()}
-            </Box>
-          </>
-        ) : (
-          // When open, show all visible items with truncation
-          visibleItems.map((item, index) => {
-            const actualIndex = scrollOffset + index;
-            const truncatedLabel = truncateLabel(item.label);
-
-            const isPlayable = item.isPlayable !== false;
-            const isNowPlaying = nowPlayingId && item.id === nowPlayingId;
-            const isSelected = actualIndex === selectedIndex && isActive;
-
-            let textColor = "gray";
-            if (!isPlayable && isSelected) {
-              textColor = "red"; // Dark gray for unplayable tracks
-            } else if (isNowPlaying) {
-              textColor = "cyan";
-            } else if (isSelected) {
-              textColor = "white";
-            }
-
-            return (
-              <Box key={item.id} overflow="hidden">
-                <Text color={textColor} wrap="truncate-end">
-                  {truncatedLabel}
-                </Text>
-              </Box>
-            );
-          })
-        )}
+                </Box>
+              );
+            })
+          )}
+        </Box>
       </Box>
-    </Box>
-  );
-});
+    );
+  }
+);
 
 Layer.displayName = "Layer";

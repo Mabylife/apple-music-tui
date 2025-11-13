@@ -9,7 +9,7 @@ interface SearchBarProps {
 export const SearchBar: React.FC<SearchBarProps> = ({ search, isFocused }) => {
   return (
     <Box
-      borderStyle="single"
+      borderStyle="round"
       borderColor={isFocused ? "white" : "gray"}
       paddingX={1}
       height={3}

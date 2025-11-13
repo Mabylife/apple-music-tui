@@ -19,11 +19,15 @@ export const Player: React.FC<PlayerProps> = ({
   nowPlayingId,
 }) => {
   const [trackInfo, setTrackInfo] = useState<MusicItem | null>(null);
-  const [playbackState, setPlaybackState] = useState<NowPlayingData | null>(null);
+  const [playbackState, setPlaybackState] = useState<NowPlayingData | null>(
+    null
+  );
   const [shuffleMode, setShuffleMode] = useState<number>(0);
   const [repeatMode, setRepeatMode] = useState<number>(0);
   const [autoPlayMode, setAutoPlayMode] = useState<boolean>(false);
-  const [confirmedArtworkUrl, setConfirmedArtworkUrl] = useState<string | null>(null);
+  const [confirmedArtworkUrl, setConfirmedArtworkUrl] = useState<string | null>(
+    null
+  );
   const [artworkVersion, setArtworkVersion] = useState<number>(0);
   const { stdout } = useStdout();
 
@@ -40,11 +44,11 @@ export const Player: React.FC<PlayerProps> = ({
     let cancelled = false;
     const requestedTrackId = nowPlayingId;
     const requestVersion = artworkVersion + 1;
-    
+
     // Clear artwork immediately to prevent old image showing
     setConfirmedArtworkUrl(null);
     setArtworkVersion(requestVersion);
-    
+
     // Debounce: wait 500ms before fetching track info
     // This ensures only the final track in a rapid sequence gets fetched
     const timeoutId = setTimeout(() => {
@@ -54,12 +58,14 @@ export const Player: React.FC<PlayerProps> = ({
           // This prevents race conditions where a slow old request completes after a newer one
           if (!cancelled && info && info.id === requestedTrackId) {
             setTrackInfo(info);
-            
+
             // Extract and confirm artwork URL with version check
             const artworkUrl = info.rawData?.attributes?.artwork?.url
-              ? info.rawData.attributes.artwork.url.replace("{w}", "640").replace("{h}", "640")
+              ? info.rawData.attributes.artwork.url
+                  .replace("{w}", "640")
+                  .replace("{h}", "640")
               : null;
-            
+
             // Only update artwork if this request's version matches current version
             setArtworkVersion((currentVersion) => {
               if (currentVersion === requestVersion && artworkUrl) {
@@ -87,7 +93,7 @@ export const Player: React.FC<PlayerProps> = ({
 
     const unsubscribe = SocketService.onPlayback((data) => {
       setPlaybackState(data);
-      
+
       // Optional verification: socket track ID can differ temporarily during track changes
       // This is expected behavior and not an error
     });
@@ -147,15 +153,17 @@ export const Player: React.FC<PlayerProps> = ({
       : 0;
 
     const currentTime = currentTimeMs ? formatTime(currentTimeMs) : "0:00";
-    
+
     // Duration from socket if available, otherwise from track info
     const durationMs = playbackState?.durationInMillis || 0;
     const totalTime = durationMs ? formatTime(durationMs) : "0:00";
 
     // Extract track info from local data
     const trackName = trackInfo.rawData?.attributes?.name || trackInfo.label;
-    const artistName = trackInfo.rawData?.attributes?.artistName || "Unknown Artist";
-    const albumName = trackInfo.rawData?.attributes?.albumName || "Unknown Album";
+    const artistName =
+      trackInfo.rawData?.attributes?.artistName || "Unknown Artist";
+    const albumName =
+      trackInfo.rawData?.attributes?.albumName || "Unknown Album";
 
     return {
       trackName,
@@ -208,7 +216,7 @@ export const Player: React.FC<PlayerProps> = ({
         flexDirection="column"
         height="100%"
         width="100%"
-        borderStyle="single"
+        borderStyle="round"
         borderColor="gray"
         paddingX={1}
       >
@@ -216,7 +224,7 @@ export const Player: React.FC<PlayerProps> = ({
         <Box
           width="100%"
           height={artSize}
-          borderStyle="single"
+          borderStyle="round"
           borderColor="gray"
           flexShrink={0}
           overflow="hidden"
@@ -235,7 +243,7 @@ export const Player: React.FC<PlayerProps> = ({
         {/* Info */}
         <Box
           flexGrow={1}
-          borderStyle="single"
+          borderStyle="round"
           borderColor="gray"
           justifyContent="flex-start"
           alignItems="flex-start"
@@ -263,7 +271,7 @@ export const Player: React.FC<PlayerProps> = ({
         flexDirection="row"
         height="100%"
         width="100%"
-        borderStyle="single"
+        borderStyle="round"
         borderColor="gray"
         paddingX={1}
       >
@@ -271,7 +279,7 @@ export const Player: React.FC<PlayerProps> = ({
         <Box
           width={artSize}
           height="100%"
-          borderStyle="single"
+          borderStyle="round"
           borderColor="gray"
           flexShrink={0}
           overflow="hidden"
@@ -290,7 +298,7 @@ export const Player: React.FC<PlayerProps> = ({
         {/* Info */}
         <Box
           flexGrow={1}
-          borderStyle="single"
+          borderStyle="round"
           borderColor="gray"
           justifyContent="flex-start"
           alignItems="flex-start"
