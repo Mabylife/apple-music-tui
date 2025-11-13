@@ -4,6 +4,7 @@ import { SocketService, NowPlayingData } from "../services/socket";
 import { PlayerAPI } from "../services/player";
 import { CiderAPI, MusicItem } from "../services/api";
 import Image from "ink-picture";
+import { styleService } from "../services/style";
 
 interface PlayerProps {
   isWide: boolean;
@@ -30,6 +31,14 @@ export const Player: React.FC<PlayerProps> = ({
   );
   const [artworkVersion, setArtworkVersion] = useState<number>(0);
   const { stdout } = useStdout();
+  const [, setStyleUpdate] = useState(0);
+  const style = styleService.getConfig();
+
+  useEffect(() => {
+    return styleService.onChange(() => {
+      setStyleUpdate((prev) => prev + 1);
+    });
+  }, []);
 
   // Fetch track info when nowPlayingId changes (local state is source of truth)
   // Debounced to avoid excessive API calls during rapid track switching
@@ -216,16 +225,16 @@ export const Player: React.FC<PlayerProps> = ({
         flexDirection="column"
         height="100%"
         width="100%"
-        borderStyle="round"
-        borderColor="gray"
+        borderStyle={style.borderStyle}
+        borderColor={style.mutedForegroundColor}
         paddingX={1}
       >
         {/* Album Art */}
         <Box
           width="100%"
           height={artSize}
-          borderStyle="round"
-          borderColor="gray"
+          borderStyle={style.borderStyle}
+          borderColor={style.mutedForegroundColor}
           flexShrink={0}
           overflow="hidden"
         >
@@ -243,24 +252,24 @@ export const Player: React.FC<PlayerProps> = ({
         {/* Info */}
         <Box
           flexGrow={1}
-          borderStyle="round"
-          borderColor="gray"
+          borderStyle={style.borderStyle}
+          borderColor={style.mutedForegroundColor}
           justifyContent="flex-start"
           alignItems="flex-start"
           flexDirection="column"
           paddingX={1}
         >
-          <Text bold color="white">
+          <Text bold color={style.foregroundColor}>
             {displayInfo.trackName}
           </Text>
-          <Text dimColor color="white">
+          <Text dimColor color={style.foregroundColor}>
             {displayInfo.artistName}
           </Text>
-          <Text dimColor color="white">
+          <Text dimColor color={style.foregroundColor}>
             {displayInfo.albumName}
           </Text>
-          <Text color="white">{displayInfo.timeDisplay}</Text>
-          <Text color="cyan">{getPlaybackModeIcons()}</Text>
+          <Text color={style.foregroundColor}>{displayInfo.timeDisplay}</Text>
+          <Text color={style.highlightColor}>{getPlaybackModeIcons()}</Text>
         </Box>
       </Box>
     );
@@ -271,16 +280,16 @@ export const Player: React.FC<PlayerProps> = ({
         flexDirection="row"
         height="100%"
         width="100%"
-        borderStyle="round"
-        borderColor="gray"
+        borderStyle={style.borderStyle}
+        borderColor={style.mutedForegroundColor}
         paddingX={1}
       >
         {/* Album Art */}
         <Box
           width={artSize}
           height="100%"
-          borderStyle="round"
-          borderColor="gray"
+          borderStyle={style.borderStyle}
+          borderColor={style.mutedForegroundColor}
           flexShrink={0}
           overflow="hidden"
         >
@@ -298,25 +307,25 @@ export const Player: React.FC<PlayerProps> = ({
         {/* Info */}
         <Box
           flexGrow={1}
-          borderStyle="round"
-          borderColor="gray"
+          borderStyle={style.borderStyle}
+          borderColor={style.mutedForegroundColor}
           justifyContent="flex-start"
           alignItems="flex-start"
           flexDirection="column"
           marginLeft={1}
           paddingX={1}
         >
-          <Text bold color="white">
+          <Text bold color={style.foregroundColor}>
             {displayInfo.trackName}
           </Text>
-          <Text dimColor color="white">
+          <Text dimColor color={style.foregroundColor}>
             {displayInfo.artistName}
           </Text>
-          <Text dimColor color="white">
+          <Text dimColor color={style.foregroundColor}>
             {displayInfo.albumName}
           </Text>
-          <Text color="white">{displayInfo.timeDisplay}</Text>
-          <Text color="cyan">{getPlaybackModeIcons()}</Text>
+          <Text color={style.foregroundColor}>{displayInfo.timeDisplay}</Text>
+          <Text color={style.highlightColor}>{getPlaybackModeIcons()}</Text>
         </Box>
       </Box>
     );

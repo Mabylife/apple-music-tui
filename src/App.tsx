@@ -9,6 +9,7 @@ import { CiderAPI, MusicItem } from "./services/api.js";
 import { PlayerAPI } from "./services/player.js";
 import { QueueService } from "./services/queue.js";
 import { SocketService } from "./services/socket.js";
+import { styleService } from "./services/style.js";
 
 interface LayerData {
   id: string;
@@ -135,8 +136,15 @@ export const App: React.FC = () => {
     loadRecommendations();
     SocketService.connect();
 
+    // Listen for style validation errors
+    const unsubscribeStyleError = styleService.onError((error) => {
+      setMessage(error);
+      setTimeout(() => setMessage(""), 3000);
+    });
+
     return () => {
       SocketService.disconnect();
+      unsubscribeStyleError();
     };
   }, []);
 

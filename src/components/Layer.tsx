@@ -1,5 +1,6 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import { Box, Text } from "ink";
+import { styleService } from "../services/style";
 
 interface Item {
   id: string;
@@ -29,6 +30,15 @@ export const Layer: React.FC<LayerProps> = React.memo(
     loadingMessage,
     nowPlayingId,
   }) => {
+    const [, setStyleUpdate] = useState(0);
+    const style = styleService.getConfig();
+
+    useEffect(() => {
+      return styleService.onChange(() => {
+        setStyleUpdate((prev) => prev + 1);
+      });
+    }, []);
+
     // Calculate visible items based on height
     // Each item takes 1 line, account for borders (2 lines) and padding
     const maxVisibleItems = Math.max(1, height - 2);
@@ -70,8 +80,8 @@ export const Layer: React.FC<LayerProps> = React.memo(
       <Box
         width={width}
         height={height}
-        borderStyle="round"
-        borderColor={isActive ? "gray" : "gray"}
+        borderStyle={style.borderStyle}
+        borderColor={style.mutedForegroundColor}
         flexDirection="column"
         paddingX={1}
         overflow="hidden"
@@ -85,7 +95,7 @@ export const Layer: React.FC<LayerProps> = React.memo(
           {loadingMessage ? (
             // Display loading message
             <Box overflow="hidden">
-              <Text color="gray">{loadingMessage}</Text>
+              <Text color={style.mutedForegroundColor}>{loadingMessage}</Text>
             </Box>
           ) : isClosed ? (
             // When closed, show the selected item at its original position
@@ -106,11 +116,11 @@ export const Layer: React.FC<LayerProps> = React.memo(
                   const truncatedLabel = truncateLabel(label);
                   const isNowPlaying = nowPlayingId && itemId === nowPlayingId;
 
-                  let textColor = "gray";
+                  let textColor = style.mutedForegroundColor;
                   if (!isPlayable) {
-                    textColor = "gray"; // black for unplayable
+                    textColor = style.mutedForegroundColor;
                   } else if (isNowPlaying) {
-                    textColor = "cyan";
+                    textColor = style.highlightColor;
                   }
 
                   return (
@@ -131,13 +141,13 @@ export const Layer: React.FC<LayerProps> = React.memo(
               const isNowPlaying = nowPlayingId && item.id === nowPlayingId;
               const isSelected = actualIndex === selectedIndex && isActive;
 
-              let textColor = "gray";
+              let textColor = style.mutedForegroundColor;
               if (!isPlayable && isSelected) {
-                textColor = "red"; // Dark gray for unplayable tracks
+                textColor = style.errorColor;
               } else if (isNowPlaying) {
-                textColor = "cyan";
+                textColor = style.highlightColor;
               } else if (isSelected) {
-                textColor = "white";
+                textColor = style.foregroundColor;
               }
 
               return (
