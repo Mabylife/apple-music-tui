@@ -169,3 +169,88 @@ But when the track ends naturally, the track just keep repeating itself instead 
 
 **Additional Feature:**
 Added `:seek` command to jump to specific time positions (e.g., `:seek 1,28` or `:seek 88`).
+
+## [x] Station 轉換時 Player 顯示錯誤的歌曲
+
+**問題描述：**
+
+當從播放清單快速連續按下一首直到創建 Station 時，Player UI 會顯示**清單中倒數第二首歌的資訊**，但實際播放的是 Station 的第一首歌。
+
+**重現步驟：**
+1. 進入一個播放清單/專輯
+2. 播放第一首歌
+3. **快速連續按 Ctrl+→** 直到清單結束，觸發 auto-play 創建 Station
+4. 結果：Player 顯示清單最後一首歌，但實際播放 Station 的歌曲
+
+**根本原因：**
+
+React State 的**異步更新特性**導致競態條件（Race Condition）：
+
+1. **`currentStationId` state 問題**：
+   - 快速按下一首時，每次調用 `requestTrackChange` 都檢查 `currentStationId !== trackId`
+   - 但 `setCurrentStationId(trackId)` 是異步的，下一次調用時 `currentStationId` 還是舊值（`null`）
+   - 導致每次都認為是「不同的 Station」，不斷調用 `stop()` 和重新播放
+   - 結果：`stop()` 導致 Cider 短暫停止，但舊歌曲 ID 還在內存中
+   - 當 `pollForStationTrackChange` 輪詢時，拿到的是舊歌曲的 ID
+
+2. **`isStationOperationLocked` state 問題**：
+   - 設計本意是用 lock 機制防止重複請求
+   - 但 `setIsStationOperationLocked(true)` 也是異步的
+   - 快速按鍵時，下一次檢查 `isStationOperationLocked` 還是 `false`
+   - 導致 lock 完全失效，多個請求同時進入，造成混亂
+
+**解決方案：**
+
+使用 **React useRef** 替代 state 來存儲需要同步檢查的值：
+
+1. **添加 Refs**：
+```typescript
+const currentStationIdRef = useRef<string | null>(null);
+const isStationOperationLockedRef = useRef(false);
+```
+
+2. **檢查時使用 Ref（同步）**：
+```typescript
+// 檢查是否已鎖定（同步讀取）
+if (isStationOperationLockedRef.current) {
+  return; // 立即返回
+}
+
+// 檢查是否不同 Station（同步讀取）
+const isDifferentStation = currentStationIdRef.current !== trackId;
+```
+
+3. **更新時同時更新 State 和 Ref**：
+```typescript
+// Lock 操作（同步生效）
+setIsStationOperationLocked(true);
+isStationOperationLockedRef.current = true;
+
+// Station ID 更新（同步生效）
+setCurrentStationId(trackId);
+currentStationIdRef.current = trackId;
+
+// Unlock 操作（同時更新）
+setIsStationOperationLocked(false);
+isStationOperationLockedRef.current = false;
+```
+
+**為什麼這樣有效：**
+
+- **State**：用於觸發 React 重新渲染 UI
+- **Ref**：用於需要立即同步讀寫的場景，不會觸發重新渲染
+- **結合使用**：State 確保 UI 更新，Ref 確保邏輯正確
+
+**修改位置：**
+
+- `src/App.tsx` Line 55-66: 添加 refs
+- `src/App.tsx` Line 82: 檢查 lock 使用 ref
+- `src/App.tsx` Line 104: 檢查 `isDifferentStation` 使用 ref  
+- `src/App.tsx` Line 108-109: Lock/unlock 同時更新 state 和 ref
+- `src/App.tsx` Line 120-121: Station ID 更新同時更新 state 和 ref
+- `src/App.tsx` Line 163: 清除 Station 狀態時同時清除 ref
+- 所有 unlock 位置（error handlers, polling success/timeout）同時更新 state 和 ref
+
+**結果：**
+
+已經可以杜絕 90% 左右的快速切換歌曲（邊界情況）時 Player 顯示錯誤歌曲的問題。

@@ -61,6 +61,10 @@ export const App: React.FC = () => {
   const isChangingTrackRef = useRef(false);
   const trackChangeDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const stationTrackFetchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  // Use ref for currentStationId to ensure synchronous updates and avoid stale values
+  const currentStationIdRef = useRef<string | null>(null);
+  // Use ref for station operation lock to ensure synchronous lock checks
+  const isStationOperationLockedRef = useRef(false);
 
   const setIsChangingTrack = (value: boolean) => {
     isChangingTrackRef.current = value;
@@ -70,60 +74,87 @@ export const App: React.FC = () => {
   const requestTrackChange = (trackId: string, trackType: string = "songs") => {
     // Track if we're starting to play a station
     const isStation = trackType === "stations";
-    setIsPlayingStation(isStation);
+    
+    console.log(`[requestTrackChange] trackId=${trackId}, type=${trackType}, isStation=${isStation}`);
 
-    // For stations: set nowPlayingId to station ID (for highlighting [Station] item)
-    // For regular tracks: set nowPlayingId to track ID (for highlighting [track] item)
-    setNowPlayingId(trackId);
-
-    // For stations: check if operation is locked
+    // For stations: check if operation is locked FIRST (before changing any state)
     if (isStation) {
-      if (isStationOperationLocked) {
+      // CRITICAL: Check ref (synchronous) instead of state (asynchronous)
+      if (isStationOperationLockedRef.current) {
+        console.log(`[requestTrackChange] Station operation locked, ignoring request`);
         setMessage("Switching...");
         setTimeout(() => setMessage(""), 1000);
         return;
       }
 
-      // Check if this is a different station (need to stop first)
-      const isDifferentStation = currentStationId !== trackId;
+      // IMPORTANT: Clear any pending regular track change before entering Station
+      if (trackChangeDebounceRef.current) {
+        console.log(`[requestTrackChange] Clearing pending debounce timeout`);
+        clearTimeout(trackChangeDebounceRef.current);
+        trackChangeDebounceRef.current = null;
+      }
+      setIsChangingTrack(false);
 
-      // Lock station operations
+      // NOW set station state (after clearing pending operations)
+      setIsPlayingStation(true);
+      setNowPlayingId(trackId);
+
+      // Check if this is a different station (need to stop first)
+      // IMPORTANT: Use ref to get synchronous value
+      const isDifferentStation = currentStationIdRef.current !== trackId;
+      console.log(`[requestTrackChange] isDifferentStation=${isDifferentStation}, currentStationId=${currentStationIdRef.current}`);
+
+      // Lock station operations in BOTH state and ref
       setIsStationOperationLocked(true);
+      isStationOperationLockedRef.current = true;
+      console.log(`[requestTrackChange] Locking station operations`);
 
       // Capture current track ID BEFORE sending request
       const trackIdBeforeSend = nowPlayingTrackInStationId;
+      console.log(`[requestTrackChange] trackIdBeforeSend=${trackIdBeforeSend}`);
 
       // If switching to a different station or first time, stop current playback first
       if (isDifferentStation) {
+        console.log(`[requestTrackChange] Calling stop() before entering new station`);
         PlayerAPI.stop()
           .then(() => {
-            // Update current station ID
+            console.log(`[requestTrackChange] Stop completed, updating station state`);
+            // Update current station ID in BOTH state and ref
             setCurrentStationId(trackId);
+            currentStationIdRef.current = trackId;
             // Clear previous track ID since we're entering a new station
             setNowPlayingTrackInStationId(null);
+            console.log(`[requestTrackChange] Calling playItem for station`);
             // Now play the new station
             return CiderAPI.playItem(trackId, trackType);
           })
           .then(() => {
+            console.log(`[requestTrackChange] PlayItem completed, starting poll with null`);
             // Start polling with null as previous track (first time in this station)
             pollForStationTrackChange(null);
           })
-          .catch(() => {
+          .catch((error) => {
+            console.error(`[requestTrackChange] Error:`, error);
             setMessage("Cannot play this station");
             setTimeout(() => setMessage(""), 2000);
             setIsStationOperationLocked(false);
+            isStationOperationLockedRef.current = false;
           });
       } else {
+        console.log(`[requestTrackChange] Same station, calling playItem directly`);
         // Same station, just play the item
         CiderAPI.playItem(trackId, trackType)
           .then(() => {
+            console.log(`[requestTrackChange] PlayItem completed, starting poll with ${trackIdBeforeSend}`);
             // Start polling for track change, passing the captured ID
             pollForStationTrackChange(trackIdBeforeSend);
           })
-          .catch(() => {
+          .catch((error) => {
+            console.error(`[requestTrackChange] Error:`, error);
             setMessage("Cannot play this track");
             setTimeout(() => setMessage(""), 2000);
             setIsStationOperationLocked(false);
+            isStationOperationLockedRef.current = false;
           });
       }
 
@@ -131,26 +162,34 @@ export const App: React.FC = () => {
     }
 
     // For regular tracks: clear station state and use existing debounce logic
+    console.log(`[requestTrackChange] Regular track mode, clearing station state`);
     setIsPlayingStation(false);
     setCurrentStationId(null);
+    currentStationIdRef.current = null; // Also clear ref
     setNowPlayingTrackInStationId(null);
+    setNowPlayingId(trackId);
 
     // Clear any pending track change request
     if (trackChangeDebounceRef.current) {
+      console.log(`[requestTrackChange] Clearing previous regular track debounce`);
       clearTimeout(trackChangeDebounceRef.current);
       trackChangeDebounceRef.current = null;
     }
 
     // Mark as changing track
     setIsChangingTrack(true);
+    console.log(`[requestTrackChange] Setting 500ms debounce for regular track ${trackId}`);
 
     // Buffer: Wait 500ms to ensure this is the final change
     // Only the last change within 500ms window will execute play and update Player UI
     trackChangeDebounceRef.current = setTimeout(async () => {
+      console.log(`[requestTrackChange.timeout] Executing debounced play for ${trackId}`);
       // Execute play request for the final track ID
       try {
         await CiderAPI.playItem(trackId, trackType);
+        console.log(`[requestTrackChange.timeout] PlayItem completed successfully`);
       } catch (error) {
+        console.error(`[requestTrackChange.timeout] PlayItem failed:`, error);
         setMessage("Cannot play this track");
         setTimeout(() => setMessage(""), 2000);
         setIsChangingTrack(false);
@@ -160,6 +199,7 @@ export const App: React.FC = () => {
 
       // Reset changing track flag
       setIsChangingTrack(false);
+      console.log(`[requestTrackChange.timeout] Updating player UI`);
 
       // Trigger player info refresh
       setPlayerUpdateTrigger((prev) => prev + 1);
@@ -170,6 +210,8 @@ export const App: React.FC = () => {
 
   // Poll for station track change until track ID changes or timeout
   const pollForStationTrackChange = (trackIdBeforeOperation: string | null) => {
+    console.log(`[pollForStationTrackChange] Starting poll with trackIdBeforeOperation=${trackIdBeforeOperation}`);
+    
     // Clear any pending fetch
     if (stationTrackFetchDebounceRef.current) {
       clearTimeout(stationTrackFetchDebounceRef.current);
@@ -185,12 +227,19 @@ export const App: React.FC = () => {
       try {
         const nowPlaying = await PlayerAPI.getNowPlaying();
         const currentTrackId = nowPlaying?.info?.playParams?.id;
+        const trackName = nowPlaying?.info?.name;
+
+        console.log(`[pollForStationTrackChange.poll] currentTrackId=${currentTrackId}, trackName=${trackName}`);
 
         if (!currentTrackId) {
           // No track info yet, keep polling
           const elapsed = Date.now() - startTime;
+          console.log(`[pollForStationTrackChange.poll] No track ID yet, elapsed=${elapsed}ms`);
+          
           if (elapsed >= maxWaitTime) {
+            console.log(`[pollForStationTrackChange.poll] TIMEOUT - no track info`);
             setIsStationOperationLocked(false);
+            isStationOperationLockedRef.current = false;
             setMessage("Timeout - no track info");
             setTimeout(() => setMessage(""), 2000);
             return;
@@ -207,20 +256,28 @@ export const App: React.FC = () => {
         const isFirstPlay = trackIdBeforeOperation === null;
         const hasTrackChanged = currentTrackId !== trackIdBeforeOperation;
 
+        console.log(`[pollForStationTrackChange.poll] isFirstPlay=${isFirstPlay}, hasTrackChanged=${hasTrackChanged}`);
+
         if (isFirstPlay || hasTrackChanged) {
           hasFoundNewTrack = true;
+          console.log(`[pollForStationTrackChange.poll] SUCCESS - Setting nowPlayingTrackInStationId=${currentTrackId}`);
           setNowPlayingTrackInStationId(currentTrackId);
           setPlayerUpdateTrigger((prev) => prev + 1);
           setIsStationOperationLocked(false);
+          isStationOperationLockedRef.current = false;
           setMessage("");
           return;
         }
 
         // Track hasn't changed yet, check timeout
         const elapsed = Date.now() - startTime;
+        console.log(`[pollForStationTrackChange.poll] Track unchanged, elapsed=${elapsed}ms`);
+        
         if (elapsed >= maxWaitTime) {
           // Timeout: force unlock but don't update (track didn't actually change)
+          console.log(`[pollForStationTrackChange.poll] TIMEOUT - track unchanged`);
           setIsStationOperationLocked(false);
+          isStationOperationLockedRef.current = false;
           setMessage("Timeout - track unchanged");
           setTimeout(() => setMessage(""), 2000);
           return;
@@ -230,8 +287,9 @@ export const App: React.FC = () => {
         setMessage("Switching...");
         stationTrackFetchDebounceRef.current = setTimeout(poll, pollInterval);
       } catch (error) {
-        console.error("Failed to poll station track:", error);
+        console.error("[pollForStationTrackChange.poll] Error:", error);
         setIsStationOperationLocked(false);
+        isStationOperationLockedRef.current = false;
         setMessage("Error polling track");
         setTimeout(() => setMessage(""), 2000);
       }
@@ -256,6 +314,13 @@ export const App: React.FC = () => {
 
     // Auto-play enabled: Create station from recently played tracks
     try {
+      // IMPORTANT: Clear any pending track change debounce before entering Station
+      if (trackChangeDebounceRef.current) {
+        clearTimeout(trackChangeDebounceRef.current);
+        trackChangeDebounceRef.current = null;
+      }
+      setIsChangingTrack(false);
+
       setMessage("Creating station from recent tracks...");
 
       // Get last 5 played tracks (or less if queue is smaller)
@@ -331,6 +396,7 @@ export const App: React.FC = () => {
     } catch (error) {
       console.error(`Failed to go to ${direction} track:`, error);
       setIsStationOperationLocked(false);
+      isStationOperationLockedRef.current = false;
       setMessage("");
     }
   };
@@ -411,6 +477,7 @@ export const App: React.FC = () => {
     const unsubscribe = SocketService.onPlayback(async (data) => {
       // Skip for stations - Cider handles station playlist automatically
       if (isPlayingStation) {
+        console.log(`[Socket.onPlayback] Skipping (isPlayingStation=true)`);
         return;
       }
 
@@ -421,6 +488,7 @@ export const App: React.FC = () => {
 
       // Detect track change (new track started playing)
       if (currentTrackId && currentTrackId !== lastTrackId) {
+        console.log(`[Socket.onPlayback] Track changed: ${lastTrackId} -> ${currentTrackId}`);
         lastTrackId = currentTrackId;
         lastIsPlaying = true;
         shouldPoll = false;
@@ -434,11 +502,13 @@ export const App: React.FC = () => {
 
       // Start polling when track reaches 95%
       if (progress >= 0.95 && !shouldPoll && duration > 0) {
+        console.log(`[Socket.onPlayback] Track at ${(progress * 100).toFixed(1)}%, starting end-of-track poll`);
         shouldPoll = true;
 
         // Start polling Cider playback status to detect when track ends
         pollInterval = setInterval(async () => {
           if (isPlayingStation) {
+            console.log(`[Socket.pollInterval] Skipping (isPlayingStation=true)`);
             return;
           }
 
@@ -457,6 +527,7 @@ export const App: React.FC = () => {
 
             // Detect transition from playing to stopped (track ended)
             if (lastIsPlaying && !isPlaying) {
+              console.log(`[Socket.pollInterval] Track ended (playing -> stopped)`);
               lastIsPlaying = false;
 
               // Stop polling
@@ -471,6 +542,7 @@ export const App: React.FC = () => {
               const nextIndex = QueueService.getNextIndex(shuffle, repeat);
 
               if (nextIndex === null) {
+                console.log(`[Socket.pollInterval] No next track, triggering auto-play`);
                 // No next track - trigger auto-play
                 handleAutoPlay().catch((error) => {
                   console.error("Auto-play failed:", error);
@@ -478,16 +550,19 @@ export const App: React.FC = () => {
                 return;
               }
 
+              console.log(`[Socket.pollInterval] Next track exists (index=${nextIndex}), auto-advancing`);
               QueueService.updateCurrentIndex(nextIndex);
               const track = QueueService.getCurrentTrack();
 
               if (!track) {
+                console.log(`[Socket.pollInterval] ERROR: No track at index ${nextIndex}`);
                 return;
               }
 
               // Update UI immediately for auto-next
               setNowPlayingId(track.id);
               setPlayerUpdateTrigger((prev) => prev + 1);
+              console.log(`[Socket.pollInterval] Requesting track change to ${track.id}`);
 
               requestTrackChange(track.id, "songs");
             } else if (isPlaying) {
@@ -506,7 +581,7 @@ export const App: React.FC = () => {
         clearInterval(pollInterval);
       }
     };
-  }, []);
+  }, [isPlayingStation]); // Add isPlayingStation as dependency
 
   useEffect(() => {
     const updateSize = () => {
