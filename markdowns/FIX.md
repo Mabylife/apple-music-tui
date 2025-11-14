@@ -177,6 +177,7 @@ Added `:seek` command to jump to specific time positions (e.g., `:seek 1,28` or 
 當從播放清單快速連續按下一首直到創建 Station 時，Player UI 會顯示**清單中倒數第二首歌的資訊**，但實際播放的是 Station 的第一首歌。
 
 **重現步驟：**
+
 1. 進入一個播放清單/專輯
 2. 播放第一首歌
 3. **快速連續按 Ctrl+→** 直到清單結束，觸發 auto-play 創建 Station
@@ -187,6 +188,7 @@ Added `:seek` command to jump to specific time positions (e.g., `:seek 1,28` or 
 React State 的**異步更新特性**導致競態條件（Race Condition）：
 
 1. **`currentStationId` state 問題**：
+
    - 快速按下一首時，每次調用 `requestTrackChange` 都檢查 `currentStationId !== trackId`
    - 但 `setCurrentStationId(trackId)` 是異步的，下一次調用時 `currentStationId` 還是舊值（`null`）
    - 導致每次都認為是「不同的 Station」，不斷調用 `stop()` 和重新播放
@@ -204,12 +206,14 @@ React State 的**異步更新特性**導致競態條件（Race Condition）：
 使用 **React useRef** 替代 state 來存儲需要同步檢查的值：
 
 1. **添加 Refs**：
+
 ```typescript
 const currentStationIdRef = useRef<string | null>(null);
 const isStationOperationLockedRef = useRef(false);
 ```
 
 2. **檢查時使用 Ref（同步）**：
+
 ```typescript
 // 檢查是否已鎖定（同步讀取）
 if (isStationOperationLockedRef.current) {
@@ -221,6 +225,7 @@ const isDifferentStation = currentStationIdRef.current !== trackId;
 ```
 
 3. **更新時同時更新 State 和 Ref**：
+
 ```typescript
 // Lock 操作（同步生效）
 setIsStationOperationLocked(true);
@@ -245,7 +250,7 @@ isStationOperationLockedRef.current = false;
 
 - `src/App.tsx` Line 55-66: 添加 refs
 - `src/App.tsx` Line 82: 檢查 lock 使用 ref
-- `src/App.tsx` Line 104: 檢查 `isDifferentStation` 使用 ref  
+- `src/App.tsx` Line 104: 檢查 `isDifferentStation` 使用 ref
 - `src/App.tsx` Line 108-109: Lock/unlock 同時更新 state 和 ref
 - `src/App.tsx` Line 120-121: Station ID 更新同時更新 state 和 ref
 - `src/App.tsx` Line 163: 清除 Station 狀態時同時清除 ref
@@ -254,3 +259,5 @@ isStationOperationLockedRef.current = false;
 **結果：**
 
 已經可以杜絕 90% 左右的快速切換歌曲（邊界情況）時 Player 顯示錯誤歌曲的問題。
+但如果使用者執意要搞壞它（例如一直連按鍵盤導致多個請求同時進入），仍然有小概率出錯。
+但已經基本杜絕正常使用情況下的錯誤顯示問題。
