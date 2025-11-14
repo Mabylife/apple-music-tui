@@ -19,3 +19,27 @@ Apple Music TUI is a terminal user interface for Apple Music. Users can use keyb
 | Repository                          | Description    |
 | ----------------------------------- | -------------- |
 | https://github.com/vadimdemedes/ink | React for CLIs |
+
+### Features List
+
+- [x] 基本播放功能
+- [x] 播放清單瀏覽
+- [x] 搜尋功能
+- [x] 播放佇列管理
+- [x] 播放器資訊顯示
+- [x] 播放狀態管理 (shuffle, repeat, auto-play)
+- [x] 專輯封面顯示
+- [x] Station 支援
+- [x] 樣式自訂與熱更新
+- [x] Auto-play
+
+- [ ] 主頁顯示內容自訂
+
+  - 顯示推薦內容 - 讓各類型各佔一定比例，不要出現全部都是`[album]`, `[playlist]`. `[station]`的情況
+  - 顯示播放清單 - 顯示使用者的播放清單，並且應該要最佳化排序，讓使用者最有可能點擊到的播放清單出現在前面
+  - 顯示最近加入 - 顯示使用者最近加入 Library 的歌曲或專輯，也要注意比例跟排序
+  - 探索（待定） - 要找到與推薦內容頁面有什麼本質上的差異，或是說探索頁面應該要有什麼樣的內容
+
+- [ ] 搜尋結果整理
+
+  - 目前的搜尋結果不是不能用，但是體驗不是很理想，應該要用更積極的方式去整理搜尋結果，讓使用者可以更快的找到他們想要的內容
