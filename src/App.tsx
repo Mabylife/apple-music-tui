@@ -553,12 +553,18 @@ export const App: React.FC = () => {
             .catch((error) => {
               console.error("Failed to stop:", error);
             });
-        } else if (command.startsWith("vol ")) {
-          const vol = parseInt(command.substring(4));
+        } else if (
+          command.startsWith("vol ") ||
+          command.startsWith("volume ")
+        ) {
+          const arg = command.startsWith("vol ")
+            ? command.substring(4)
+            : command.substring(7);
+          const vol = parseInt(arg.trim(), 10);
           if (!isNaN(vol) && vol >= 0 && vol <= 100) {
             PlayerAPI.setVolume(vol / 100)
               .then(() => {
-                setMessage(`Volume ${vol}`);
+                setMessage(`Volume set to ${vol}`);
                 setPlayerUpdateTrigger((prev) => prev + 1);
                 setTimeout(() => setMessage(""), 2000);
               })
