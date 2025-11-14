@@ -145,3 +145,27 @@ Request Body (`application/json`)
 2. **Layer highlighted item 不顯示**：Layer 中不會顯示當前正在播放的曲目（cyan 高亮）
 
 詳細解決方法請見 markdowns/STATION.md
+
+## [x] Different behavior between `Ctrl+ArrowRight/Left` and `Naturally Next Track` when playing in a list.
+
+When playing tracks, using `Manual Next/Prev Track` (default: `Ctrl+ArrowRight/Left`) will behavior normally and successfully according to the S/R/A modes.
+
+But when the track ends naturally, the track just keep repeating itself instead of following the S/R/A modes.
+
+**Root Cause:**
+
+1. Socket data has unit mismatch: `currentPlaybackTime` is in seconds, but `durationInMillis` is in milliseconds
+2. Progress calculation was incorrect (always 0%), so 95% threshold was never reached
+3. When track ends, Cider API returns `trackId` as `undefined`, breaking the track-end detection logic
+
+**Solution:**
+
+1. Convert `currentPlaybackTime` to milliseconds by multiplying by 1000
+2. Use Socket to monitor progress and start polling when reaching 95%
+3. Poll Cider API every 500ms to detect playback stop (detecting `isPlaying` transition from true to false)
+4. Remove `trackId` check since it becomes undefined when track ends
+5. Use identical next-track logic as manual `Ctrl+RightArrow` to ensure consistent behavior
+6. Update UI immediately (`setNowPlayingId` and `setPlayerUpdateTrigger`) before calling `requestTrackChange` to prevent showing old track info
+
+**Additional Feature:**
+Added `:seek` command to jump to specific time positions (e.g., `:seek 1,28` or `:seek 88`).
