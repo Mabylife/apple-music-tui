@@ -63,6 +63,14 @@ For technical details, see [QUEUE.md](./markdowns/QUEUE.md) and [STATION.md](./m
 
 ## 🚀 Installation
 
+### Use NPM (Recommended)
+
+```bash
+npm install -g apple-music-tui
+```
+
+### Build from Source
+
 ```bash
 # Clone the repository
 git clone https://github.com/Mabylife/apple-music-tui.git
@@ -78,7 +86,7 @@ npm run build
 npm start
 ```
 
-### Development Mode
+development mode
 
 ```bash
 npm run dev
@@ -164,6 +172,8 @@ Playback modes (shuffle, repeat, autoplay) are persisted in `playback-state.json
 
 ## What's Next
 
+If you are interested in contributing or following the development, here are some planned features:
+
 ### Auto launch Cider in the background
 
 Future versions may include an option to automatically launch Cider in the background when starting the TUI, simplifying the setup process.
@@ -198,9 +208,14 @@ Additional style and behavior customization options, such as themes, keybindings
 - [Style Customization](./markdowns/STYLE.md) - Customize colors and borders
 - [Project Structure](./markdowns/STRUCTURE.md) - Architecture overview
 
+There all in `/markdowns/` folder.
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+I really appreciate any help with bug fixes, new features, or documentation improvements.
+I'm not a professional developer, so your contributions will help make this project better for everyone.
 
 ## 📝 License
 
