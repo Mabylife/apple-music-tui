@@ -5,6 +5,8 @@ A Terminal User Interface (TUI) for Apple Music, using [Cider](https://cider.sh/
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+![screenshot](screenshot1.png)
+
 ## Features
 
 - **Full Playback Control** - Play, pause, skip, shuffle, repeat modes
