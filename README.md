@@ -178,6 +178,10 @@ This should be next primary feature. Currently, you need to manually start Cider
 
 Future versions may include an option to automatically launch Cider in the background when starting the TUI, simplifying the setup process.
 
+### High-resolution album art
+
+Right now, the album are rendered in low resolution using half-block characters. but if user's terminal supports it, we can render higher-resolution images using more advanced techniques.
+
 ### More bug hunting
 
 This TUI app is still in active development. Expect more bug fixes and performance improvements in future releases.
