@@ -5,11 +5,7 @@ A Terminal User Interface (TUI) for Apple Music, using [Cider](https://cider.sh/
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-## Current Status
-
-This project is in **active development**. The core features are implemented, but there may still be bugs and missing functionalities. While I do not recommend using the app right now, if you are interested in the project, feel free to follow the repository for updates.
-
-## ✨ Features
+## Features
 
 - **Full Playback Control** - Play, pause, skip, shuffle, repeat modes
 - **Search** - Search songs, albums, artists, and playlists
@@ -20,7 +16,7 @@ This project is in **active development**. The core features are implemented, bu
 - **Keyboard-Driven** - Vim-inspired navigation and commands
 - **Responsive Layout** - Adapts to terminal width (wide/column modes)
 
-## 📋 Requirements
+## Requirements
 
 - **Node.js** (v16 or higher)
 - **[Cider](https://cider.sh/)** running on `localhost:10767`
@@ -30,7 +26,7 @@ This project is in **active development**. The core features are implemented, bu
 - **Nerd Fonts** for icon display (recommended: [JetBrains Mono Nerd Font](https://www.nerdfonts.com/))
 - **Apple Music Subscription** with active Cider session
 
-## 🏗️ How It Works
+## How It Works
 
 This application uses a **split-responsibility architecture** where the TUI and Cider work together seamlessly:
 
@@ -61,7 +57,7 @@ This architecture gives you the best of both worlds: Cider handles the complex A
 
 For technical details, see [QUEUE.md](./markdowns/QUEUE.md) and [STATION.md](./markdowns/STATION.md).
 
-## 🚀 Installation
+## Installation
 
 ### Use NPM (Recommended)
 
@@ -92,7 +88,7 @@ development mode
 npm run dev
 ```
 
-## 🎮 Usage
+## Usage
 
 ### Navigation
 
@@ -113,9 +109,9 @@ npm run dev
 | `Ctrl + R` | Toggle repeat (off → one → all) |
 | `Ctrl + A` | Toggle auto-play                |
 
-`RE`/`R1` -> Repeat playlist / Repeat one track
-`S` -> Shuffle mode
-`A` -> Auto-play mode
+- `RE`/`R1` -> Repeat playlist / Repeat one track
+- `S` -> Shuffle mode
+- `A` -> Auto-play mode
 
 ### Search & Commands
 
@@ -152,7 +148,7 @@ error-color: red;
 border-style: round;
 ```
 
-Available styles option values can be found in [STYLE.md](./markdowns/STYLE.md).
+Available options and explanations can be found in [STYLE.md](./markdowns/STYLE.md).
 
 ### Home Page Configuration
 
@@ -175,6 +171,8 @@ Playback modes (shuffle, repeat, autoplay) are persisted in `playback-state.json
 If you are interested in contributing or following the development, here are some planned features:
 
 ### Auto launch Cider in the background
+
+This should be next primary feature. Currently, you need to manually start Cider before launching the TUI.
 
 Future versions may include an option to automatically launch Cider in the background when starting the TUI, simplifying the setup process.
 
