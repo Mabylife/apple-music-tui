@@ -24,6 +24,8 @@ This project is in **active development**. The core features are implemented, bu
 
 - **Node.js** (v16 or higher)
 - **[Cider](https://cider.sh/)** running on `localhost:10767`
+  - Enable `WebSockets API`
+  - Disable `Require API Token`
 - **Nerd Fonts** for icon display (recommended: [JetBrains Mono Nerd Font](https://www.nerdfonts.com/))
 - **Apple Music Subscription** with active Cider session
 
