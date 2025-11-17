@@ -11,6 +11,7 @@ import { QueueService } from "./services/queue.js";
 import { SocketService } from "./services/socket.js";
 import { styleService } from "./services/style.js";
 import { playbackStateService } from "./services/playbackState.js";
+import { configService, HomeView } from "./services/config.js";
 
 import fs from "fs";
 
@@ -74,14 +75,18 @@ export const App: React.FC = () => {
   const requestTrackChange = (trackId: string, trackType: string = "songs") => {
     // Track if we're starting to play a station
     const isStation = trackType === "stations";
-    
-    console.log(`[requestTrackChange] trackId=${trackId}, type=${trackType}, isStation=${isStation}`);
+
+    console.log(
+      `[requestTrackChange] trackId=${trackId}, type=${trackType}, isStation=${isStation}`
+    );
 
     // For stations: check if operation is locked FIRST (before changing any state)
     if (isStation) {
       // CRITICAL: Check ref (synchronous) instead of state (asynchronous)
       if (isStationOperationLockedRef.current) {
-        console.log(`[requestTrackChange] Station operation locked, ignoring request`);
+        console.log(
+          `[requestTrackChange] Station operation locked, ignoring request`
+        );
         setMessage("Switching...");
         setTimeout(() => setMessage(""), 1000);
         return;
@@ -102,7 +107,9 @@ export const App: React.FC = () => {
       // Check if this is a different station (need to stop first)
       // IMPORTANT: Use ref to get synchronous value
       const isDifferentStation = currentStationIdRef.current !== trackId;
-      console.log(`[requestTrackChange] isDifferentStation=${isDifferentStation}, currentStationId=${currentStationIdRef.current}`);
+      console.log(
+        `[requestTrackChange] isDifferentStation=${isDifferentStation}, currentStationId=${currentStationIdRef.current}`
+      );
 
       // Lock station operations in BOTH state and ref
       setIsStationOperationLocked(true);
@@ -111,14 +118,20 @@ export const App: React.FC = () => {
 
       // Capture current track ID BEFORE sending request
       const trackIdBeforeSend = nowPlayingTrackInStationId;
-      console.log(`[requestTrackChange] trackIdBeforeSend=${trackIdBeforeSend}`);
+      console.log(
+        `[requestTrackChange] trackIdBeforeSend=${trackIdBeforeSend}`
+      );
 
       // If switching to a different station or first time, stop current playback first
       if (isDifferentStation) {
-        console.log(`[requestTrackChange] Calling stop() before entering new station`);
+        console.log(
+          `[requestTrackChange] Calling stop() before entering new station`
+        );
         PlayerAPI.stop()
           .then(() => {
-            console.log(`[requestTrackChange] Stop completed, updating station state`);
+            console.log(
+              `[requestTrackChange] Stop completed, updating station state`
+            );
             // Update current station ID in BOTH state and ref
             setCurrentStationId(trackId);
             currentStationIdRef.current = trackId;
@@ -129,7 +142,9 @@ export const App: React.FC = () => {
             return CiderAPI.playItem(trackId, trackType);
           })
           .then(() => {
-            console.log(`[requestTrackChange] PlayItem completed, starting poll with null`);
+            console.log(
+              `[requestTrackChange] PlayItem completed, starting poll with null`
+            );
             // Start polling with null as previous track (first time in this station)
             pollForStationTrackChange(null);
           })
@@ -141,11 +156,15 @@ export const App: React.FC = () => {
             isStationOperationLockedRef.current = false;
           });
       } else {
-        console.log(`[requestTrackChange] Same station, calling playItem directly`);
+        console.log(
+          `[requestTrackChange] Same station, calling playItem directly`
+        );
         // Same station, just play the item
         CiderAPI.playItem(trackId, trackType)
           .then(() => {
-            console.log(`[requestTrackChange] PlayItem completed, starting poll with ${trackIdBeforeSend}`);
+            console.log(
+              `[requestTrackChange] PlayItem completed, starting poll with ${trackIdBeforeSend}`
+            );
             // Start polling for track change, passing the captured ID
             pollForStationTrackChange(trackIdBeforeSend);
           })
@@ -162,7 +181,9 @@ export const App: React.FC = () => {
     }
 
     // For regular tracks: clear station state and use existing debounce logic
-    console.log(`[requestTrackChange] Regular track mode, clearing station state`);
+    console.log(
+      `[requestTrackChange] Regular track mode, clearing station state`
+    );
     setIsPlayingStation(false);
     setCurrentStationId(null);
     currentStationIdRef.current = null; // Also clear ref
@@ -171,23 +192,31 @@ export const App: React.FC = () => {
 
     // Clear any pending track change request
     if (trackChangeDebounceRef.current) {
-      console.log(`[requestTrackChange] Clearing previous regular track debounce`);
+      console.log(
+        `[requestTrackChange] Clearing previous regular track debounce`
+      );
       clearTimeout(trackChangeDebounceRef.current);
       trackChangeDebounceRef.current = null;
     }
 
     // Mark as changing track
     setIsChangingTrack(true);
-    console.log(`[requestTrackChange] Setting 500ms debounce for regular track ${trackId}`);
+    console.log(
+      `[requestTrackChange] Setting 500ms debounce for regular track ${trackId}`
+    );
 
     // Buffer: Wait 500ms to ensure this is the final change
     // Only the last change within 500ms window will execute play and update Player UI
     trackChangeDebounceRef.current = setTimeout(async () => {
-      console.log(`[requestTrackChange.timeout] Executing debounced play for ${trackId}`);
+      console.log(
+        `[requestTrackChange.timeout] Executing debounced play for ${trackId}`
+      );
       // Execute play request for the final track ID
       try {
         await CiderAPI.playItem(trackId, trackType);
-        console.log(`[requestTrackChange.timeout] PlayItem completed successfully`);
+        console.log(
+          `[requestTrackChange.timeout] PlayItem completed successfully`
+        );
       } catch (error) {
         console.error(`[requestTrackChange.timeout] PlayItem failed:`, error);
         setMessage("Cannot play this track");
@@ -210,8 +239,10 @@ export const App: React.FC = () => {
 
   // Poll for station track change until track ID changes or timeout
   const pollForStationTrackChange = (trackIdBeforeOperation: string | null) => {
-    console.log(`[pollForStationTrackChange] Starting poll with trackIdBeforeOperation=${trackIdBeforeOperation}`);
-    
+    console.log(
+      `[pollForStationTrackChange] Starting poll with trackIdBeforeOperation=${trackIdBeforeOperation}`
+    );
+
     // Clear any pending fetch
     if (stationTrackFetchDebounceRef.current) {
       clearTimeout(stationTrackFetchDebounceRef.current);
@@ -229,15 +260,21 @@ export const App: React.FC = () => {
         const currentTrackId = nowPlaying?.info?.playParams?.id;
         const trackName = nowPlaying?.info?.name;
 
-        console.log(`[pollForStationTrackChange.poll] currentTrackId=${currentTrackId}, trackName=${trackName}`);
+        console.log(
+          `[pollForStationTrackChange.poll] currentTrackId=${currentTrackId}, trackName=${trackName}`
+        );
 
         if (!currentTrackId) {
           // No track info yet, keep polling
           const elapsed = Date.now() - startTime;
-          console.log(`[pollForStationTrackChange.poll] No track ID yet, elapsed=${elapsed}ms`);
-          
+          console.log(
+            `[pollForStationTrackChange.poll] No track ID yet, elapsed=${elapsed}ms`
+          );
+
           if (elapsed >= maxWaitTime) {
-            console.log(`[pollForStationTrackChange.poll] TIMEOUT - no track info`);
+            console.log(
+              `[pollForStationTrackChange.poll] TIMEOUT - no track info`
+            );
             setIsStationOperationLocked(false);
             isStationOperationLockedRef.current = false;
             setMessage("Timeout - no track info");
@@ -256,11 +293,15 @@ export const App: React.FC = () => {
         const isFirstPlay = trackIdBeforeOperation === null;
         const hasTrackChanged = currentTrackId !== trackIdBeforeOperation;
 
-        console.log(`[pollForStationTrackChange.poll] isFirstPlay=${isFirstPlay}, hasTrackChanged=${hasTrackChanged}`);
+        console.log(
+          `[pollForStationTrackChange.poll] isFirstPlay=${isFirstPlay}, hasTrackChanged=${hasTrackChanged}`
+        );
 
         if (isFirstPlay || hasTrackChanged) {
           hasFoundNewTrack = true;
-          console.log(`[pollForStationTrackChange.poll] SUCCESS - Setting nowPlayingTrackInStationId=${currentTrackId}`);
+          console.log(
+            `[pollForStationTrackChange.poll] SUCCESS - Setting nowPlayingTrackInStationId=${currentTrackId}`
+          );
           setNowPlayingTrackInStationId(currentTrackId);
           setPlayerUpdateTrigger((prev) => prev + 1);
           setIsStationOperationLocked(false);
@@ -271,11 +312,15 @@ export const App: React.FC = () => {
 
         // Track hasn't changed yet, check timeout
         const elapsed = Date.now() - startTime;
-        console.log(`[pollForStationTrackChange.poll] Track unchanged, elapsed=${elapsed}ms`);
-        
+        console.log(
+          `[pollForStationTrackChange.poll] Track unchanged, elapsed=${elapsed}ms`
+        );
+
         if (elapsed >= maxWaitTime) {
           // Timeout: force unlock but don't update (track didn't actually change)
-          console.log(`[pollForStationTrackChange.poll] TIMEOUT - track unchanged`);
+          console.log(
+            `[pollForStationTrackChange.poll] TIMEOUT - track unchanged`
+          );
           setIsStationOperationLocked(false);
           isStationOperationLockedRef.current = false;
           setMessage("Timeout - track unchanged");
@@ -406,7 +451,7 @@ export const App: React.FC = () => {
     const loadingLayerId = layers[0]?.id || String(layerIdCounter++);
 
     try {
-      const items = await CiderAPI.getRecommendations(10);
+      const items = await CiderAPI.getRecommendations(20);
       setLayers([
         {
           id: loadingLayerId,
@@ -445,14 +490,126 @@ export const App: React.FC = () => {
     }
   };
 
-  // Load recommendations on mount
-  useEffect(() => {
-    // Stop any current playback in Cider to avoid state conflicts
-    PlayerAPI.stop().catch(() => {
-      // Silently fail if stop fails (e.g., nothing was playing)
-    });
+  // Load recently played function
+  const loadRecentlyPlayed = async () => {
+    const loadingLayerId = layers[0]?.id || String(layerIdCounter++);
 
-    loadRecommendations();
+    try {
+      const items = await CiderAPI.getRecentlyPlayed(20);
+      setLayers([
+        {
+          id: loadingLayerId,
+          items: items.map(
+            (item): MusicItem => ({
+              id: item.id,
+              label: `${item.icon}  ${item.label}`,
+              type: item.type,
+              icon: item.icon,
+              rawData: item.rawData,
+              isPlayable: item.isPlayable,
+            })
+          ),
+          selectedIndex: 0,
+          loadingMessage: undefined,
+        },
+      ]);
+    } catch (error) {
+      console.error("Failed to load recently played:", error);
+      setLayers([
+        {
+          id: loadingLayerId,
+          items: [
+            {
+              id: "error",
+              label: "Error loading recently played...",
+              type: "songs",
+              icon: "󰀨",
+              rawData: null,
+            },
+          ],
+          selectedIndex: 0,
+          loadingMessage: undefined,
+        },
+      ]);
+    }
+  };
+
+  // Load library playlists function
+  const loadLibraryPlaylists = async () => {
+    const loadingLayerId = layers[0]?.id || String(layerIdCounter++);
+
+    try {
+      const items = await CiderAPI.getLibraryPlaylists(50);
+      setLayers([
+        {
+          id: loadingLayerId,
+          items: items.map(
+            (item): MusicItem => ({
+              id: item.id,
+              label: `${item.icon}  ${item.label}`,
+              type: item.type,
+              icon: item.icon,
+              rawData: item.rawData,
+              isPlayable: item.isPlayable,
+            })
+          ),
+          selectedIndex: 0,
+          loadingMessage: undefined,
+        },
+      ]);
+    } catch (error) {
+      console.error("Failed to load library playlists:", error);
+      setLayers([
+        {
+          id: loadingLayerId,
+          items: [
+            {
+              id: "error",
+              label: "Error loading playlists...",
+              type: "songs",
+              icon: "󰀨",
+              rawData: null,
+            },
+          ],
+          selectedIndex: 0,
+          loadingMessage: undefined,
+        },
+      ]);
+    }
+  };
+
+  // Load home view based on type
+  const loadHome = async (view?: HomeView) => {
+    const homeView = view || configService.getDefaultHome();
+    
+    switch (homeView) {
+      case "recent":
+        await loadRecentlyPlayed();
+        break;
+      case "playlists":
+        await loadLibraryPlaylists();
+        break;
+      case "recommendations":
+      default:
+        await loadRecommendations();
+        break;
+    }
+  };
+
+  // Load default home on mount
+  useEffect(() => {
+    const initApp = async () => {
+      // Stop any current playback in Cider to avoid state conflicts
+      await PlayerAPI.stop().catch(() => {
+        // Silently fail if stop fails (e.g., nothing was playing)
+      });
+
+      // Wait for config to be loaded before loading home
+      await configService.waitForInit();
+      await loadHome();
+    };
+
+    initApp();
     SocketService.connect();
 
     // Listen for style validation errors
@@ -488,7 +645,9 @@ export const App: React.FC = () => {
 
       // Detect track change (new track started playing)
       if (currentTrackId && currentTrackId !== lastTrackId) {
-        console.log(`[Socket.onPlayback] Track changed: ${lastTrackId} -> ${currentTrackId}`);
+        console.log(
+          `[Socket.onPlayback] Track changed: ${lastTrackId} -> ${currentTrackId}`
+        );
         lastTrackId = currentTrackId;
         lastIsPlaying = true;
         shouldPoll = false;
@@ -502,13 +661,19 @@ export const App: React.FC = () => {
 
       // Start polling when track reaches 95%
       if (progress >= 0.95 && !shouldPoll && duration > 0) {
-        console.log(`[Socket.onPlayback] Track at ${(progress * 100).toFixed(1)}%, starting end-of-track poll`);
+        console.log(
+          `[Socket.onPlayback] Track at ${(progress * 100).toFixed(
+            1
+          )}%, starting end-of-track poll`
+        );
         shouldPoll = true;
 
         // Start polling Cider playback status to detect when track ends
         pollInterval = setInterval(async () => {
           if (isPlayingStation) {
-            console.log(`[Socket.pollInterval] Skipping (isPlayingStation=true)`);
+            console.log(
+              `[Socket.pollInterval] Skipping (isPlayingStation=true)`
+            );
             return;
           }
 
@@ -527,7 +692,9 @@ export const App: React.FC = () => {
 
             // Detect transition from playing to stopped (track ended)
             if (lastIsPlaying && !isPlaying) {
-              console.log(`[Socket.pollInterval] Track ended (playing -> stopped)`);
+              console.log(
+                `[Socket.pollInterval] Track ended (playing -> stopped)`
+              );
               lastIsPlaying = false;
 
               // Stop polling
@@ -542,7 +709,9 @@ export const App: React.FC = () => {
               const nextIndex = QueueService.getNextIndex(shuffle, repeat);
 
               if (nextIndex === null) {
-                console.log(`[Socket.pollInterval] No next track, triggering auto-play`);
+                console.log(
+                  `[Socket.pollInterval] No next track, triggering auto-play`
+                );
                 // No next track - trigger auto-play
                 handleAutoPlay().catch((error) => {
                   console.error("Auto-play failed:", error);
@@ -550,19 +719,25 @@ export const App: React.FC = () => {
                 return;
               }
 
-              console.log(`[Socket.pollInterval] Next track exists (index=${nextIndex}), auto-advancing`);
+              console.log(
+                `[Socket.pollInterval] Next track exists (index=${nextIndex}), auto-advancing`
+              );
               QueueService.updateCurrentIndex(nextIndex);
               const track = QueueService.getCurrentTrack();
 
               if (!track) {
-                console.log(`[Socket.pollInterval] ERROR: No track at index ${nextIndex}`);
+                console.log(
+                  `[Socket.pollInterval] ERROR: No track at index ${nextIndex}`
+                );
                 return;
               }
 
               // Update UI immediately for auto-next
               setNowPlayingId(track.id);
               setPlayerUpdateTrigger((prev) => prev + 1);
-              console.log(`[Socket.pollInterval] Requesting track change to ${track.id}`);
+              console.log(
+                `[Socket.pollInterval] Requesting track change to ${track.id}`
+              );
 
               requestTrackChange(track.id, "songs");
             } else if (isPlaying) {
@@ -608,8 +783,12 @@ export const App: React.FC = () => {
         // Execute command
         if (command === "q" || command === "quit" || command === "qa") {
           exit();
-        } else if (command === "home") {
-          // Reload recommendations
+        } else if (command.startsWith("home")) {
+          // Parse home command with optional argument
+          const args = command.split(/\s+/);
+          const subCommand = args[1]?.toLowerCase();
+          
+          // Reset to home layer
           setActiveLayerIndex(0);
           setLayers([
             {
@@ -619,7 +798,18 @@ export const App: React.FC = () => {
               loadingMessage: "loading...",
             },
           ]);
-          loadRecommendations();
+          
+          // Load appropriate content based on subcommand
+          if (subCommand === "recent") {
+            loadHome("recent");
+          } else if (subCommand === "playlist" || subCommand === "playlists") {
+            loadHome("playlists");
+          } else if (subCommand === "recommendation" || subCommand === "recommendations") {
+            loadHome("recommendations");
+          } else {
+            // Default: use configured default home
+            loadHome();
+          }
         } else if (command === "stop") {
           PlayerAPI.stop()
             .then(() => {
@@ -918,7 +1108,7 @@ export const App: React.FC = () => {
       const itemId = selectedItem.id;
 
       // Check if it's a song (not a category)
-      if (itemType === "songs" && !selectedItem.rawData?.isTopTracks) {
+      if ((itemType === "songs" || itemType === "library-songs") && !selectedItem.rawData?.isTopTracks) {
         // Check if the track is playable
         if (selectedItem.isPlayable === false) {
           setMessage("This track is not available");
@@ -931,7 +1121,7 @@ export const App: React.FC = () => {
           // We're in Layer 2+ (inside album/playlist/top tracks)
           const parentLayer = layers[activeLayerIndex];
           const allTracks = parentLayer.items.filter(
-            (item) => item.type === "songs" && item.isPlayable !== false
+            (item) => (item.type === "songs" || item.type === "library-songs") && item.isPlayable !== false
           );
           const trackIndex = allTracks.findIndex((t) => t.id === itemId);
 
@@ -1016,7 +1206,7 @@ export const App: React.FC = () => {
               // Regular album - load tracks
               newItems = await CiderAPI.getAlbumTracks(itemId, nextLayerIndex);
             }
-          } else if (itemType === "playlists") {
+          } else if (itemType === "playlists" || itemType === "library-playlists") {
             newItems = await CiderAPI.getPlaylistTracks(itemId, nextLayerIndex);
           } else if (itemType === "artists") {
             newItems = await CiderAPI.getArtistContent(itemId);
