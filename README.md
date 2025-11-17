@@ -7,7 +7,7 @@ A Terminal User Interface (TUI) for Apple Music, using [Cider](https://cider.sh/
 
 ![screenshot](screenshot1.png)
 
-## Features
+## 🌟 Features
 
 - **Full Playback Control** - Play, pause, skip, shuffle, repeat modes
 - **Search** - Search songs, albums, artists, and playlists
@@ -18,7 +18,7 @@ A Terminal User Interface (TUI) for Apple Music, using [Cider](https://cider.sh/
 - **Keyboard-Driven** - Vim-inspired navigation and commands
 - **Responsive Layout** - Adapts to terminal width (wide/column modes)
 
-## Requirements
+## 📜 Requirements
 
 - **Node.js** (v16 or higher)
 - **[Cider](https://cider.sh/)** running on `localhost:10767`
@@ -28,7 +28,7 @@ A Terminal User Interface (TUI) for Apple Music, using [Cider](https://cider.sh/
 - **Nerd Fonts** for icon display (recommended: [JetBrains Mono Nerd Font](https://www.nerdfonts.com/))
 - **Apple Music Subscription** with active Cider session
 
-## How It Works
+## 🏗️ How It Works
 
 This application uses a **split-responsibility architecture** where the TUI and Cider work together seamlessly:
 
@@ -59,7 +59,7 @@ This architecture gives you the best of both worlds: Cider handles the complex A
 
 For technical details, see [QUEUE.md](./markdowns/QUEUE.md) and [STATION.md](./markdowns/STATION.md).
 
-## Installation
+## 🚀 Installation
 
 ### Use NPM (Recommended)
 
@@ -90,7 +90,7 @@ development mode
 npm run dev
 ```
 
-## Usage
+## ⌨️ Usage
 
 ### Navigation
 
@@ -168,7 +168,7 @@ available options are `recommendations`, `playlists`, and `recent`.
 
 Playback modes (shuffle, repeat, autoplay) are persisted in `playback-state.json`.
 
-## What's Next
+## 🎯 What's Next
 
 If you are interested in contributing or following the development, here are some planned features:
 
