@@ -1,0 +1,31 @@
+# Development files
+src/
+tsconfig.json
+.vscode/
+.idea/
+
+# Documentation (keep only essential docs in npm package)
+markdowns/
+api-test.html
+debug-*.js
+layout/
+
+# Test files
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Build artifacts
+*.log
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Dependencies
+node_modules/
+
+# Backup
+.backup/

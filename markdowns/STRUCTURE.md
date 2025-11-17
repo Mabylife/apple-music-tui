@@ -10,8 +10,8 @@ Apple Music TUI is a terminal user interface for Apple Music. Users can use keyb
 
 | Repository                                                  | Description                     |
 | ----------------------------------------------------------- | ------------------------------- |
-| https://cider.sh/                                           | Close Source Apple Music Client |
-| [RPC](./cider-rpc-doc-alt.md)[RPC](./cider-rpc-document.md) | Endpoint for Apple Music API    |
+| https://cider.sh/                                           | Closed Source Apple Music Client |
+| [Cider RPC Documentation](./cider-rpc-document.md) | Endpoint for Apple Music API    |
 | https://developer.apple.com/documentation/applemusicapi/    | Apple Music API                 |
 
 ### Frontend

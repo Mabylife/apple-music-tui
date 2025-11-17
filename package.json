@@ -1,6 +1,22 @@
 {
   "name": "apple-music-tui",
   "version": "1.0.0",
+  "description": "A Terminal User Interface for Apple Music powered by Cider",
+  "author": "Mabylife",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Mabylife/apple-music-tui.git"
+  },
+  "keywords": [
+    "apple-music",
+    "tui",
+    "terminal",
+    "cli",
+    "music",
+    "player",
+    "cider"
+  ],
   "type": "module",
   "bin": {
     "apple-music-tui": "./dist/index.js"

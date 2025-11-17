@@ -1,6 +1,6 @@
-`fetch.ts` is a function that handles Cider RCP more easily.
+`fetch.ts` is a function that handles Cider RPC more easily.
 
-`cider-rpc-document.md` should be used to understand Cider RCP.
+`cider-rpc-document.md` should be used to understand Cider RPC.
 
 [Apple Music API](https://developer.apple.com/documentation/applemusicapi) should be used to understand Apple Music API.
 

@@ -2,7 +2,7 @@
 
 This data will explain how the data fetching in this TUI app works.
 
-[測試完成的 API 動作](/api-test.html)，強烈建議參考
+> 📝 **Note**: See `api-test.html` in the project root for tested API actions
 
 ## Get Lists data
 
