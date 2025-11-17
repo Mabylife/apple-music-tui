@@ -11,14 +11,14 @@ This project is in **active development**. The core features are implemented, bu
 
 ## ✨ Features
 
-- 🎵 **Full Playback Control** - Play, pause, skip, shuffle, repeat modes
-- 🔍 **Search** - Search songs, albums, artists, and playlists
-- 📻 **Station Support** - Play Apple Music radio stations
-- 🎨 **Album Art Display** - View album covers in your terminal
-- 🔄 **Auto-play** - Automatically create stations from recently played tracks
-- 🎨 **Customizable Styles** - Hot-reload custom color schemes and borders
-- ⚡ **Keyboard-Driven** - Vim-inspired navigation and commands
-- 🖼️ **Responsive Layout** - Adapts to terminal width (wide/column modes)
+- **Full Playback Control** - Play, pause, skip, shuffle, repeat modes
+- **Search** - Search songs, albums, artists, and playlists
+- **Station Support** - Play Apple Music radio stations
+- **Album Art Display** - View album covers in your terminal
+- **Auto-play** - Automatically create stations from recently played tracks
+- **Customizable Styles** - Hot-reload custom color schemes and borders
+- **Keyboard-Driven** - Vim-inspired navigation and commands
+- **Responsive Layout** - Adapts to terminal width (wide/column modes)
 
 ## 📋 Requirements
 
@@ -31,7 +31,7 @@ This project is in **active development**. The core features are implemented, bu
 
 This application uses a **split-responsibility architecture** where the TUI and Cider work together seamlessly:
 
-**🎨 Apple Music TUI (This Application)**
+### Apple Music TUI (This Application)
 
 - Provides the terminal user interface and keyboard navigation
 - Manages the **virtual playback queue** (shuffle, repeat, track order)
@@ -39,7 +39,7 @@ This application uses a **split-responsibility architecture** where the TUI and 
 - Controls playback logic (what plays next, when to auto-play)
 - Fetches and displays music metadata (album art, track info)
 
-**🎵 Cider (Backend Player)**
+### Cider (Backend Player)
 
 - Connects to Apple Music services with your account
 - Provides the **Apple Music API bridge** (authentication, catalog access)
@@ -47,11 +47,14 @@ This application uses a **split-responsibility architecture** where the TUI and 
 - Streams music and manages audio output
 - Excellent audio enhancements and features
 
-**🔄 Why This Design?**
+### Why This Design?
+
 This architecture gives you the best of both worlds: Cider handles the complex Apple Music integration and audio playback, while the TUI provides a keyboard-driven, customizable interface with full control over your listening experience. For most tracks, the TUI manages everything; for radio stations, it delegates playback control to Cider's native station handling.
 
-**TL:DR:**
-Cider stays in the background and wait for the API requests from the TUI with the song's id. And the TUI manages the playback queue, UIUX, and UI rendering.
+### TL:DR
+
+- Cider stays in the background and wait for the API requests from the TUI with the song's id.
+- TUI manages the playback queue, UIUX, and fetching/rendering.
 
 For technical details, see [QUEUE.md](./markdowns/QUEUE.md) and [STATION.md](./markdowns/STATION.md).
 
@@ -112,16 +115,6 @@ npm run dev
 | `:vol <num>`           | Set volume (0-100)                                                         |
 | `:seek <time>`         | Seek to time (e.g., `1,28` or `88` seconds)                                |
 
-### Item Types
-
-| Icon | Type     | Action                                |
-| ---- | -------- | ------------------------------------- |
-| 󰝚    | Track    | Play immediately                      |
-| 󰀥    | Album    | Show track list                       |
-| 󰲸    | Playlist | Show track list                       |
-| 󰐹    | Station  | Play radio station                    |
-| 󱍞    | Artist   | Show categories (Top Tracks / Albums) |
-
 For detailed usage instructions, see [USAGE.md](./markdowns/USAGE.md).
 
 ## ⚙️ Configuration
@@ -137,13 +130,11 @@ Configuration files are stored in:
 Edit `style.css` to customize colors and borders (hot-reload supported):
 
 ```css
-:root {
-  foreground-color: white;
-  muted-foreground-color: gray;
-  highlight-color: cyan;
-  error-color: red;
-  border-style: round;
-}
+foreground-color: white;
+muted-foreground-color: gray;
+highlight-color: cyan;
+error-color: red;
+border-style: round;
 ```
 
 Available styles option values can be found in [STYLE.md](./markdowns/STYLE.md).
@@ -154,12 +145,12 @@ Playback modes (shuffle, repeat, autoplay) are persisted in `playback-state.json
 
 ## 🛠️ Tech Stack
 
-- **[Ink](https://github.com/vadimdemedes/ink)** - React for CLIs
-- **[React](https://react.dev/)** - UI component framework
-- **[TypeScript](https://www.typescriptlang.org/)** - Type safety
-- **[Socket.io](https://socket.io/)** - Real-time playback updates
-- **[Cider RPC](https://cider.sh/)** - Apple Music API bridge
-- **[ink-picture](https://github.com/endernoke/ink-picture)** - Album art rendering
+- [Ink](https://github.com/vadimdemedes/ink) - React for CLIs
+- [React](https://react.dev/) - UI component framework
+- [TypeScript](https://www.typescriptlang.org/) - Type safety
+- [Socket.io](https://socket.io/) - Real-time playback updates
+- [Cider RPC](https://cider.sh/) - Apple Music API bridge
+- [ink-picture](https://github.com/endernoke/ink-picture) - Album art rendering
 
 ## 📖 Documentation
 
@@ -180,7 +171,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- [Cider](https://cider.sh/) - For providing the Apple Music API bridge
+- [Cider](https://cider.sh/) - For providing the Apple Music API bridge and the pleasant audio playback features.
 - [Ink](https://github.com/vadimdemedes/ink) - For the amazing TUI framework
 - [Apple Music API](https://developer.apple.com/documentation/applemusicapi/) - For music metadata
 
