@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useState } from "react";
 import { Box, Text } from "ink";
-import { styleService } from "../services/style";
+import { styleService } from "../services/style.js";
 
 interface Item {
   id: string;

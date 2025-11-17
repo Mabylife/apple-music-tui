@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Box, Text, useStdout } from "ink";
-import { SocketService, NowPlayingData } from "../services/socket";
-import { PlayerAPI } from "../services/player";
-import { CiderAPI, MusicItem } from "../services/api";
+import { SocketService, NowPlayingData } from "../services/socket.js";
+import { PlayerAPI } from "../services/player.js";
+import { CiderAPI, MusicItem } from "../services/api.js";
 import Image from "ink-picture";
-import { styleService } from "../services/style";
-import { playbackStateService } from "../services/playbackState";
+import { styleService } from "../services/style.js";
+import { playbackStateService } from "../services/playbackState.js";
 
 interface PlayerProps {
   isWide: boolean;

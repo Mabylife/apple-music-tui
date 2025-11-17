@@ -24,6 +24,7 @@ This project is in **active development**. The core features are implemented, bu
 
 - **Node.js** (v16 or higher)
 - **[Cider](https://cider.sh/)** running on `localhost:10767`
+  - Login Cider with your Apple Music account (subscription required)
   - Enable `WebSockets API`
   - Disable `Require API Token`
 - **Nerd Fonts** for icon display (recommended: [JetBrains Mono Nerd Font](https://www.nerdfonts.com/))
@@ -104,6 +105,10 @@ npm run dev
 | `Ctrl + R` | Toggle repeat (off → one → all) |
 | `Ctrl + A` | Toggle auto-play                |
 
+`RE`/`R1` -> Repeat playlist / Repeat one track
+`S` -> Shuffle mode
+`A` -> Auto-play mode
+
 ### Search & Commands
 
 | Key                    | Action                                                                     |
@@ -141,9 +146,39 @@ border-style: round;
 
 Available styles option values can be found in [STYLE.md](./markdowns/STYLE.md).
 
+### Home Page Configuration
+
+Edit `config.json` to customize the home page sections:
+
+available options are `recommendations`, `playlists`, and `recent`.
+
+```json
+{
+  "defaultHome": "recommendations"
+}
+```
+
 ### Playback State
 
 Playback modes (shuffle, repeat, autoplay) are persisted in `playback-state.json`.
+
+## What's Next
+
+### Auto launch Cider in the background
+
+Future versions may include an option to automatically launch Cider in the background when starting the TUI, simplifying the setup process.
+
+### More bug hunting
+
+This TUI app is still in active development. Expect more bug fixes and performance improvements in future releases.
+
+### More responsive layouts
+
+Improved layout options for various terminal sizes and orientations.
+
+### More customization options
+
+Additional style and behavior customization options, such as themes, keybindings, and more.
 
 ## 🛠️ Tech Stack
 
