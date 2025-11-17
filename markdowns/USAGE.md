@@ -19,7 +19,7 @@
 
 - `:` - 進入命令模式
 - `:q` / `:quit` / `:qa` - 退出應用
-- `:home` - 返回 Home（第一層）
+- `:home` - 返回 Home(會根據 config 設定載入`recommendations`/`playlists`/`recently-played`)
 - `ESC` - 返回 Lists
 - `:vol/volume` `<num>` 設定音量（0-100）
 - `:seek` `<time>` 跳轉到指定時間（格式如 `1,28` 或 `88` 秒）
